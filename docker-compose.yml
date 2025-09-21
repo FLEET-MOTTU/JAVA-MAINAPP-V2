@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  fleet-db-mysql:
+    image: mysql:8.0
+    container_name: fleet-db-mysql
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${DB_PORT}:3306"
+    volumes:
+      - fleet-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $${MYSQL_USER} -p$${MYSQL_PASSWORD} || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+  fleet-app-java:
+    build: .
+    container_name: fleet-app-java
+    environment:
+      DB_HOST: fleet-db-mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "8080:8080"
+    volumes:
+      - uploads-data:/app/uploads
+    depends_on:
+      fleet-db-mysql:
+        condition: service_healthy
+
+volumes:
+  fleet-db-data:
+  uploads-data:
