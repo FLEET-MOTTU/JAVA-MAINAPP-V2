@@ -9,4 +9,5 @@ import java.util.List;
 
 public interface PateoRepository extends JpaRepository<Pateo, UUID> {
     List<Pateo> findAllByGerenciadoPorId(UUID gerenciadoPorId);
+    List<Pateo> findAllByStatus(String status);
 }

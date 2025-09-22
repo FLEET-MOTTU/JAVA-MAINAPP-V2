@@ -29,13 +29,13 @@
                         th:text="${usuario.status}">
                     </span>
                 </td>
-                <td th:text="${#temporals.format(usuario.createdAt, 'dd/MM/yyyy HH:mm')}">...</td>
+                <td th:text="${#temporals.format(usuario.createdAt, 'dd/MM/yyyy HH:mm')}">...</td>  
                 <td>
-                    <a th:href="@{/admin/usuarios/{id}/editar(id=${usuario.id})}" class="btn btn-sm btn-warning">Editar</a>
-                    <form th:action="@{/admin/usuarios/{id}/desativar(id=${usuario.id})}" method="post" class="d-inline" ...>
-                        </form>
-                </td>   
-                <td>
+                    <td>
+                        <a th:href="@{/admin/usuarios/{id}/editar(id=${usuario.id})}" class="btn btn-sm btn-warning">Editar</a>
+                        <form th:action="@{/admin/usuarios/{id}/desativar(id=${usuario.id})}" method="post" class="d-inline" ...>
+                            </form>
+                    </td>  
                     <form th:action="@{/admin/usuarios/{id}/desativar(id=${usuario.id})}" method="post" class="d-inline"
                         onsubmit="return confirm('Isso desativará o usuário E todos os pátios gerenciados por ele. Confirma?');">
                         <button type="submit" class="btn btn-sm btn-danger">Desativar</button>

@@ -4,6 +4,7 @@ import br.com.mottu.fleet.application.dto.OnboardingRequest;
 import br.com.mottu.fleet.application.dto.UsuarioAdminUpdateRequest;
 import br.com.mottu.fleet.domain.service.OnboardingService;
 import br.com.mottu.fleet.domain.service.UsuarioAdminService;
+import br.com.mottu.fleet.domain.service.PateoService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,6 +32,8 @@ public class AdminController {
     @Autowired
     private UsuarioAdminService usuarioAdminService;
 
+    @Autowired
+    private PateoService pateoService;
 
     /**
      * Método para EXIBIR a página com o formulário de cadastro.
@@ -109,4 +112,14 @@ public class AdminController {
         usuarioAdminService.atualizar(request);
         return "redirect:/admin/usuarios";
     }
+
+    /**
+     * GET: Exibe o dashboard principal com a lista de pátios.
+     */
+    @GetMapping("/dashboard")
+    public String exibirDashboard(Model model) {
+        model.addAttribute("pateos", pateoService.listarTodosAtivos());
+        return "admin/dashboard";
+    }
+    
 }
