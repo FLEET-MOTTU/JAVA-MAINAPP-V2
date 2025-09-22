@@ -5,6 +5,7 @@ services:
     image: mysql:8.0
     container_name: fleet-db-mysql
     environment:
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
@@ -14,10 +15,10 @@ services:
       - fleet-db-data:/var/lib/mysql
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $${MYSQL_USER} -p$${MYSQL_PASSWORD} || exit 1"]
-      interval: 20s
-      timeout: 10s
+      interval: 30s
+      timeout: 20s
       retries: 10
-      start_period: 40s
+      start_period: 60s
 
   fleet-app-java:
     build: .
@@ -35,6 +36,16 @@ services:
     depends_on:
       fleet-db-mysql:
         condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./src/main/java
+          target: /app/src/main/java
+        - action: sync
+          path: ./src/main/resources
+          target: /app/src/main/resources
+        - action: rebuild
+          path: pom.xml
 
 volumes:
   fleet-db-data:

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main-layout :: layout(~{::title}, ~{::section})}">
+
+<head>
+    <title>Onboarding de Nova Unidade</title>
+</head>
+<body>
+    <section>
+        <h1>Onboarding de Nova Unidade Mottu</h1>
+
+        <div th:if="${errorMessage}" style="color:red; border: 1px solid red; padding: 10px; margin-bottom: 15px;">
+            <p th:text="${errorMessage}"></p>
+        </div>
+
+        <div th:if="${param.sucesso}">
+            <p style="color: green;">Nova unidade cadastrada com sucesso!</p>
+        </div>
+
+        <form th:action="@{/admin/onboarding}" th:object="${request}" method="post">
+            <h2>Dados do Pátio</h2>
+            <input type="text" th:field="*{nomePateo}" placeholder="Nome do Pátio">
+            <span style="color:red" th:if="${#fields.hasErrors('nomePateo')}" th:errors="*{nomePateo}"></span>
+
+            <h2>Dados do Administrador da Unidade</h2>
+            <input type="text" th:field="*{nomeAdminPateo}" placeholder="Nome do Admin">
+            <span style="color:red" th:if="${#fields.hasErrors('nomeAdminPateo')}" th:errors="*{nomeAdminPateo}"></span>
+
+            <input type="email" th:field="*{emailAdminPateo}" placeholder="Email do Admin">
+            <span style="color:red" th:if="${#fields.hasErrors('emailAdminPateo')}" th:errors="*{emailAdminPateo}"></span>
+
+            <input type="password" th:field="*{senhaAdminPateo}" placeholder="Senha Provisória">
+            <span style="color:red" th:if="${#fields.hasErrors('senhaAdminPateo')}" th:errors="*{senhaAdminPateo}"></span>
+
+            <button type="submit">Cadastrar Unidade</button>
+        </form>
+
+    </section>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main-layout :: layout(~{::title}, ~{::section})}">
+<head>
+    <title>Gerenciar Administradores</title>
+</head>
+<body>
+<section>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Administradores de Pátio</h1>
+        <a th:href="@{/admin/onboarding/novo}" class="btn btn-primary">Adicionar Novo</a>
+    </div>
+
+    <table class="table table-striped table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Status</th> <th>Data de Criação</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="usuario : ${usuarios}">
+                <td th:text="${usuario.nome}">Nome do Admin</td>
+                <td th:text="${usuario.email}">email@admin.com</td>
+                <td> <span class="badge"
+                        th:classappend="${usuario.status == 'ATIVO'} ? 'bg-success' : 'bg-danger'"
+                        th:text="${usuario.status}">
+                    </span>
+                </td>
+                <td th:text="${#temporals.format(usuario.createdAt, 'dd/MM/yyyy HH:mm')}">...</td>
+                <td>
+                    <a th:href="@{/admin/usuarios/{id}/editar(id=${usuario.id})}" class="btn btn-sm btn-warning">Editar</a>
+                    <form th:action="@{/admin/usuarios/{id}/desativar(id=${usuario.id})}" method="post" class="d-inline" ...>
+                        </form>
+                </td>   
+                <td>
+                    <form th:action="@{/admin/usuarios/{id}/desativar(id=${usuario.id})}" method="post" class="d-inline"
+                        onsubmit="return confirm('Isso desativará o usuário E todos os pátios gerenciados por ele. Confirma?');">
+                        <button type="submit" class="btn btn-sm btn-danger">Desativar</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+    </table>
+</section>
+</body>
+</html>

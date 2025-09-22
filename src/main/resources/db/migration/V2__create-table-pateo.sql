@@ -3,6 +3,7 @@ CREATE TABLE pateo (
     nome VARCHAR(100) NOT NULL,
     planta_baixa_url VARCHAR(255),
     gerenciado_por_id BINARY(16) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'ATIVO',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (gerenciado_por_id) REFERENCES usuario_admin(id)
 );
