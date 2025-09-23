@@ -7,5 +7,7 @@ CREATE TABLE funcionario (
     status ENUM('ATIVO', 'SUSPENSO', 'REMOVIDO') NOT NULL,
     foto_url VARCHAR(255),
     ultimo_login TIMESTAMP,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    pateo_id BINARY(16) NOT NULL,
+    CONSTRAINT fk_funcionario_pateo FOREIGN KEY (pateo_id) REFERENCES pateo(id)
 );

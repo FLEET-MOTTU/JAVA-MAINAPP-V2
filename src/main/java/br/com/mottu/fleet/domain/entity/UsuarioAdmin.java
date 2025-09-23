@@ -41,31 +41,41 @@ public class UsuarioAdmin implements UserDetails {
     public UsuarioAdmin() {
     }
 
-    /**
-     * Retorna as permissões (roles) do usuário.
-     * O Spring Security exige que as roles comecem com "ROLE_".
-     */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + this.role));
     }
 
-    /**
-     * Retorna a senha do usuário.
-     */
     @Override
     public String getPassword() {
         return this.senha;
     }
 
-    /**
-     * Retorna o "nome de usuário" que, no nosso caso, será o email.
-     */
     @Override
     public String getUsername() {
         return this.email;
     }
 
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return "ATIVO".equals(this.status);
+    }
+    
     public UUID getId() { return id; }
     public String getNome() { return nome; }
     public String getEmail() { return email; }
