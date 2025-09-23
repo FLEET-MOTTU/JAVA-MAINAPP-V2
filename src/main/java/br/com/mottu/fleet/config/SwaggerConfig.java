@@ -1,28 +1,33 @@
-// package br.com.mottu.fleet.config;
+package br.com.mottu.fleet.config;
 
-// import io.swagger.v3.oas.models.media.Schema;
-// import io.swagger.v3.oas.models.media.StringSchema;
-// import org.springdoc.core.customizers.OpenApiCustomizer;
-// import org.springframework.context.annotation.Bean;
-// import org.springframework.context.annotation.Configuration;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.media.StringSchema;
 
-// @Configuration
-// public class SwaggerConfig {
+import org.springdoc.core.customizers.OpenApiCustomizer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
-//     /**
-//      * Este Bean customiza a geração do OpenAPI.
-//      * Ele mapeia o tipo complexo 'Polygon' para um tipo simples 'string' na documentação.
-//      * Isso evita que o gerador do Swagger quebre ao tentar analisar a classe Polygon.
-//      */
-//     @Bean
-//     public OpenApiCustomizer openApiCustomizer() {
-//         // A biblioteca do Swagger pode ter dificuldade em converter o tipo Polygon.
-//         // Este customizador substitui o schema complexo do Polygon por um schema de String simples.
-//         return openApi -> {
-//             Schema<?> polygonSchema = new StringSchema()
-//                     .description("Representação de um polígono em formato WKT (Well-Known Text)")
-//                     .example("POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))");
-//             openApi.getComponents().getSchemas().put("Polygon", polygonSchema);
-//         };
-//     }
-// }
+@Configuration
+@SecurityScheme(
+    name = "bearerAuth",
+    type = SecuritySchemeType.HTTP,
+    bearerFormat = "JWT",
+    scheme = "bearer"
+)
+public class SwaggerConfig {
+
+    /**
+     * Este Bean customiza a geração do OpenAPI para o tipo Polygon.
+     */
+    @Bean
+    public OpenApiCustomizer openApiCustomizer() {
+        return openApi -> {
+            Schema<?> polygonSchema = new StringSchema()
+                    .description("Representação de um polígono em formato WKT (Well-Known Text)")
+                    .example("POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))");
+            openApi.getComponents().getSchemas().put("Polygon", polygonSchema);
+        };
+    }
+}
