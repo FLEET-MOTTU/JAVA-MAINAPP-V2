@@ -24,6 +24,12 @@ public class Pateo {
     @Column(name = "planta_baixa_url")
     private String plantaBaixaUrl;
 
+    @Column(name = "planta_largura")
+    private Integer plantaLargura;
+
+    @Column(name = "planta_altura")
+    private Integer plantaAltura;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "gerenciado_por_id", nullable = false)
     private UsuarioAdmin gerenciadoPor;
@@ -49,6 +55,8 @@ public class Pateo {
     public UUID getId() { return id; }
     public String getNome() { return nome; }
     public String getPlantaBaixaUrl() { return plantaBaixaUrl; }
+    public Integer getPlantaLargura() { return plantaLargura; }
+    public Integer getPlantaAltura() { return plantaAltura; }
     public UsuarioAdmin getGerenciadoPor() { return gerenciadoPor; }
     public Status getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }
@@ -57,6 +65,8 @@ public class Pateo {
     public void setId(UUID id) { this.id = id; }
     public void setNome(String nome) { this.nome = nome; }
     public void setPlantaBaixaUrl(String plantaBaixaUrl) { this.plantaBaixaUrl = plantaBaixaUrl; }
+    public void setPlantaLargura(Integer plantaLargura) { this.plantaLargura = plantaLargura; }
+    public void setPlantaAltura(Integer plantaAltura) { this.plantaAltura = plantaAltura; }
     public void setGerenciadoPor(UsuarioAdmin gerenciadoPor) { this.gerenciadoPor = gerenciadoPor; }
     public void setStatus(Status status) { this.status = status; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }

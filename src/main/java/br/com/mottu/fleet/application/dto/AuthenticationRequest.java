@@ -9,10 +9,10 @@ public record AuthenticationRequest(
 
     @NotBlank(message = "Email não pode ser em branco")
     @Email(message = "Formato de email inválido")
-    @Schema(description = "Email de login do Administrador do Pátio", example = "adminpateo@mottu.com")
+    @Schema(description = "Email de login do Administrador do Pátio", example = "pateo.admin@mottu.com")
     String email,
 
     @NotBlank(message = "Senha não pode estar em branco")
-    @Schema(description = "Senha de login do Administrador do Pátio", example = "senha123")
+    @Schema(description = "Senha de login do Administrador do Pátio", example = "mottu123")
     String senha
 ) {}

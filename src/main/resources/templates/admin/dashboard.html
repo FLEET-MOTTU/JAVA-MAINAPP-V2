@@ -17,6 +17,7 @@
             <table class="table table-hover align-middle">
                 <thead class="table-dark">
                 <tr>
+                    <th>ID do Pátio</th>
                     <th>Nome do Pátio</th>
                     <th>Admin Responsável</th>
                     <th>Email do Admin</th>
@@ -26,6 +27,7 @@
                 </thead>
                 <tbody>
                 <tr th:each="pateo : ${pateos}">
+                    <td><small class="text-muted font-monospace" th:text="${pateo.id}"></small></td>
                     <td th:text="${pateo.nome}">Pátio Teste</td>
                     <td th:text="${pateo.gerenciadoPor.nome}">Admin Teste</td>
                     <td th:text="${pateo.gerenciadoPor.email}">admin@teste.com</td>
@@ -41,7 +43,7 @@
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(pateos)}">
-                    <td colspan="5" class="text-center p-4">Nenhum pátio ativo cadastrado.</td>
+                    <td colspan="6" class="text-center p-4">Nenhum pátio ativo cadastrado.</td>
                 </tr>
                 </tbody>
             </table>
