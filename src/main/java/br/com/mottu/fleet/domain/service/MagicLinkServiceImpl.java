@@ -4,8 +4,9 @@ import br.com.mottu.fleet.domain.entity.Funcionario;
 import br.com.mottu.fleet.domain.entity.TokenAcesso;
 import br.com.mottu.fleet.domain.repository.TokenAcessoRepository;
 import br.com.mottu.fleet.config.JwtService;
+import br.com.mottu.fleet.domain.exception.InvalidTokenException;
+import br.com.mottu.fleet.domain.exception.ResourceNotFoundException;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,17 +16,27 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Service
-class MagicLinkServiceImpl implements MagicLinkService {
+public class MagicLinkServiceImpl implements MagicLinkService {
 
-    @Autowired
-    private TokenAcessoRepository tokenAcessoRepository;
+    private final TokenAcessoRepository tokenAcessoRepository;
+    private final JwtService jwtService;
+    private final String baseUrl;
 
-    @Autowired 
-    private JwtService jwtService; 
+    public MagicLinkServiceImpl(TokenAcessoRepository tokenAcessoRepository,
+                                JwtService jwtService,
+                                @Value("${application.base-url}") String baseUrl) {
+        this.tokenAcessoRepository = tokenAcessoRepository;
+        this.jwtService = jwtService;
+        this.baseUrl = baseUrl;
+    }
 
-    @Value("${application.base-url}")
-    private String baseUrl;
-
+    /**
+     * Cria um novo token de acesso único para um funcionário, salva no banco e retorna a URL completa do Magic Link.
+     * Regra de Negócio: O token gerado tem validade de 24 horas.
+     *
+     * @param funcionario O funcionário para o qual o link será gerado.
+     * @return A String contendo a URL completa do Magic Link.
+     */
     @Override
     public String gerarLink(Funcionario funcionario) {
         String valorToken = UUID.randomUUID().toString();
@@ -34,7 +45,7 @@ class MagicLinkServiceImpl implements MagicLinkService {
         token.setToken(valorToken);
         token.setFuncionario(funcionario);
         token.setCriadoEm(Instant.now());
-        token.setExpiraEm(Instant.now().plus(24, ChronoUnit.HOURS)); // Expira em 24 horas
+        token.setExpiraEm(Instant.now().plus(24, ChronoUnit.HOURS));
         token.setUsado(false);
 
         tokenAcessoRepository.save(token);
@@ -42,27 +53,31 @@ class MagicLinkServiceImpl implements MagicLinkService {
         return baseUrl + "/auth/validar-token?valor=" + valorToken;
     }
 
+    /**
+     * Valida um token de acesso de uso único. Se for válido, o token é invalidado (marcado como usado)
+     * e um token de sessão JWT de longa duração é gerado para o funcionário.
+     *
+     * @param valorToken O valor do token recebido na URL.
+     * @return Uma String contendo o token JWT de sessão.
+     * @throws ResourceNotFoundException se o token não for encontrado no banco de dados.
+     * @throws InvalidTokenException se o token já tiver sido usado ou estiver expirado.
+     */
     @Override
     @Transactional
     public String validarTokenEGerarJwt(String valorToken) {
-        // Busca o token no banco
-        TokenAcesso token = tokenAcessoRepository.findByToken(valorToken) // Precisaremos criar este método no repo
-                .orElseThrow(() -> new RuntimeException("Token inválido ou não encontrado."));
+        TokenAcesso token = tokenAcessoRepository.findByToken(valorToken)
+                .orElseThrow(() -> new ResourceNotFoundException("Token de acesso não encontrado."));
 
-        // Validações
         if (token.isUsado()) {
-            throw new RuntimeException("Este link já foi utilizado.");
+            throw new InvalidTokenException("Este link de acesso já foi utilizado.");
         }
         if (token.getExpiraEm().isBefore(Instant.now())) {
-            throw new RuntimeException("Este link de acesso expirou.");
+            throw new InvalidTokenException("Este link de acesso expirou.");
         }
 
-        // Marca o token como usado para que não possa ser usado novamente
         token.setUsado(true);
         tokenAcessoRepository.save(token);
 
-        // Gera o token de sessão final (JWT) para o funcionário
         return jwtService.generateToken(token.getFuncionario());
-    }
-    
+    }    
 }

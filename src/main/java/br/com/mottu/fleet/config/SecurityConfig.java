@@ -1,6 +1,5 @@
 package br.com.mottu.fleet.config;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -25,11 +24,14 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthFilter;
+    private final JwtAuthenticationFilter jwtAuthFilter;
 
-    // --- BEANS GERAIS (usados por ambas as configurações) ---
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
 
+
+    // BEANS GERAIS
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -43,6 +45,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+        // TO-DO: LEMBRAR DE TROCAR ISSO EM PROD
         configuration.setAllowedOrigins(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
@@ -52,22 +55,22 @@ public class SecurityConfig {
         return source;
     }
 
-    // --- REGRAS DE SEGURANÇA ---
+    // REGRAS
 
     /**
-     * Regra 1: Segurança da API (Stateless com JWT)
-     * A anotação @Order(1) garante que esta regra seja verificada PRIMEIRO.
+     * Regra 1: Segurança da API (Stateless com JWT).
+     * Processada com prioridade 1 para todas as rotas que começam com "/api/".
      */
     @Bean
     @Order(1)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/api/**") // Aplica esta regra APENAS para URLs que começam com /api/
+                .securityMatcher("/api/**")
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable()) // Desabilita CSRF para a API stateless
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/auth/login").permitAll() // Login da API é público
-                        .anyRequest().authenticated() // Todas as outras rotas da API exigem autenticação
+                        .requestMatchers("/api/auth/login").permitAll()
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -76,16 +79,17 @@ public class SecurityConfig {
     }
 
     /**
-     * Regra 2: Segurança do Painel Web (Stateful com Sessão)
-     * A anotação @Order(2) faz desta a regra "fallback" para tudo que não for /api/**
+     * Regra 2: Segurança do Painel Web (Stateful com Sessão).
+     * Processada com prioridade 2 para todas as outras rotas.
      */
     @Bean
     @Order(2)
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/css/**", "/js/**").permitAll()
-                        .requestMatchers("/login").permitAll()
+                        .requestMatchers("/css/**", "/js/**", "/error").permitAll()
+                        .requestMatchers("/login", "/auth/validar-token").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-resources/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("SUPER_ADMIN")
                         .anyRequest().authenticated()
@@ -99,7 +103,6 @@ public class SecurityConfig {
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/login?logout")
                 );
-        // Não definimos sessionManagement, então ele usará o padrão (Stateful com sessões)
 
         return http.build();
     }

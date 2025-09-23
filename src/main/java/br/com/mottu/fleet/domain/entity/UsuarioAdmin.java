@@ -1,5 +1,7 @@
 package br.com.mottu.fleet.domain.entity;
 
+import br.com.mottu.fleet.domain.enums.Role;
+import br.com.mottu.fleet.domain.enums.Status;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.security.core.GrantedAuthority;
@@ -28,22 +30,23 @@ public class UsuarioAdmin implements UserDetails {
     @Column(nullable = false)
     private String senha;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String role;
+    private Role role;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status;
+    private Status status;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    public UsuarioAdmin() {
-    }
+    public UsuarioAdmin() {}
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + this.role));
+        return List.of(new SimpleGrantedAuthority("ROLE_" + this.role.name()));
     }
 
     @Override
@@ -73,23 +76,24 @@ public class UsuarioAdmin implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return "ATIVO".equals(this.status);
+        return Status.ATIVO.equals(this.status);
     }
-    
+
+
     public UUID getId() { return id; }
     public String getNome() { return nome; }
     public String getEmail() { return email; }
     public String getSenha() { return senha; }
-    public String getRole() { return role; }
-    public String getStatus() { return status; }
+    public Role getRole() { return role; }
+    public Status getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }
 
     public void setId(UUID id) { this.id = id; }
     public void setNome(String nome) { this.nome = nome; }
     public void setEmail(String email) { this.email = email; }
-    public void setSenha(String senha) { this.senha = senha; }    
-    public void setRole(String role) { this.role = role; }
-    public void setStatus(String status) { this.status = status; }
+    public void setSenha(String senha) { this.senha = senha; }
+    public void setRole(Role role) { this.role = role; }
+    public void setStatus(Status status) { this.status = status; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 
 }

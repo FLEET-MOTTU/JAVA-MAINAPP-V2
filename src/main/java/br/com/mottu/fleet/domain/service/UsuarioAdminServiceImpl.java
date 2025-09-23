@@ -4,8 +4,14 @@ import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 import br.com.mottu.fleet.domain.repository.UsuarioAdminRepository;
 import br.com.mottu.fleet.domain.repository.PateoRepository;
+import br.com.mottu.fleet.application.dto.OnboardingRequest;
 import br.com.mottu.fleet.application.dto.UsuarioAdminUpdateRequest;
+import br.com.mottu.fleet.domain.enums.Role;
+import br.com.mottu.fleet.domain.enums.Status;
+import br.com.mottu.fleet.domain.exception.EmailAlreadyExistsException;
+import br.com.mottu.fleet.domain.exception.ResourceNotFoundException;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,52 +21,81 @@ import java.util.UUID;
 import java.util.Optional;
 
 @Service
-class UsuarioAdminServiceImpl implements UsuarioAdminService {
+public class UsuarioAdminServiceImpl implements UsuarioAdminService {
+
+    private final UsuarioAdminRepository usuarioAdminRepository;
+    private final PateoRepository pateoRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    private UsuarioAdminRepository usuarioAdminRepository;
-
-    @Autowired
-    private PateoRepository pateoRepository;
+    public UsuarioAdminServiceImpl(UsuarioAdminRepository usuarioAdminRepository, PateoRepository pateoRepository, PasswordEncoder passwordEncoder) {
+        this.usuarioAdminRepository = usuarioAdminRepository;
+        this.pateoRepository = pateoRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+    
 
     @Override
     public List<UsuarioAdmin> listarAdminsDePateo() {
-        return usuarioAdminRepository.findAllByRoleAndStatus("PATEO_ADMIN", "ATIVO");
+        return usuarioAdminRepository.findAllByRoleAndStatus(Role.PATEO_ADMIN, Status.ATIVO);
     }
 
+
+    /**
+     * Realiza o "soft delete" de um administrador e, como consequência, de todos os pátios 
+     * que ele gerencia.
+     * Regra de Negócio: A remoção de um admin implica na remoção lógica de suas unidades.
+     * O status de ambos os registros (admin e pátios) é alterado para REMOVIDO.
+     *
+     * @param id O UUID do administrador a ser removido.
+     */
     @Override
     @Transactional
     public void desativarPorId(UUID id) {
-        // Busca o admin ou lança uma exceção se não encontrar
         UsuarioAdmin admin = usuarioAdminRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário com ID " + id + " não encontrado."));
 
-        // Desativa o usuário
-        admin.setStatus("INATIVO");
+        admin.setStatus(Status.REMOVIDO);
         usuarioAdminRepository.save(admin);
 
-        // Busca e desativa todos os pátios gerenciados por ele
         List<Pateo> pateos = pateoRepository.findAllByGerenciadoPorId(id);
-        pateos.forEach(pateo -> pateo.setStatus("INATIVO"));
+
+        pateos.forEach(pateo -> pateo.setStatus(Status.REMOVIDO));
         pateoRepository.saveAll(pateos);
     }
+
 
     @Override
     public Optional<UsuarioAdmin> buscarPorId(UUID id) {
         return usuarioAdminRepository.findById(id);
     }
 
+
     @Override
     @Transactional
     public void atualizar(UsuarioAdminUpdateRequest request) {
-        // Busca o admin existente no banco ou lança exceção
         UsuarioAdmin adminExistente = usuarioAdminRepository.findById(request.getId())
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado para atualização"));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário com ID " + request.getId() + " não encontrado para atualização."));
 
-        // Atualiza apenas os campos permitidos
         adminExistente.setNome(request.getNome());
-
-        // Salva as alterações
         usuarioAdminRepository.save(adminExistente);
-    }    
+    }
+
+    @Override
+    @Transactional
+    public UsuarioAdmin criarAdminDePateo(OnboardingRequest request) {
+        usuarioAdminRepository.findByEmail(request.getEmailAdminPateo())
+                .ifPresent(usuario -> {
+                    throw new EmailAlreadyExistsException("O email informado já está em uso.");
+                });
+
+        UsuarioAdmin novoAdminPateo = new UsuarioAdmin();
+        novoAdminPateo.setNome(request.getNomeAdminPateo());
+        novoAdminPateo.setEmail(request.getEmailAdminPateo());
+        novoAdminPateo.setSenha(passwordEncoder.encode(request.getSenhaAdminPateo()));
+        novoAdminPateo.setRole(Role.PATEO_ADMIN);
+        novoAdminPateo.setStatus(Status.ATIVO);
+
+        return usuarioAdminRepository.save(novoAdminPateo);
+    }
 }

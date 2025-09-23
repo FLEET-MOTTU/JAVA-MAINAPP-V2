@@ -1,6 +1,8 @@
 package br.com.mottu.fleet.config;
 
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
@@ -10,6 +12,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+@OpenAPIDefinition(
+    info = @Info(
+        title = "Mottu F.L.E.E.T. API",
+        version = "v2",
+        description = "API responsável pelo gerenciamento de pátios, administradores e funcionários do sistema FLEET."
+    )
+)
 @SecurityScheme(
     name = "bearerAuth",
     type = SecuritySchemeType.HTTP,
@@ -18,9 +27,6 @@ import org.springframework.context.annotation.Configuration;
 )
 public class SwaggerConfig {
 
-    /**
-     * Este Bean customiza a geração do OpenAPI para o tipo Polygon.
-     */
     @Bean
     public OpenApiCustomizer openApiCustomizer() {
         return openApi -> {

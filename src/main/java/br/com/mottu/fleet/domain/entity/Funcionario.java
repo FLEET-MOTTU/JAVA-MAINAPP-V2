@@ -52,6 +52,8 @@ public class Funcionario implements UserDetails {
     @JoinColumn(name = "pateo_id", nullable = false)
     private Pateo pateo;
 
+    public Funcionario() {}
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + this.cargo.name()));

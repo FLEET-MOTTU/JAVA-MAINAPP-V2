@@ -11,34 +11,34 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.validation.Valid;
-
+/**
+ * Endpoints públicos de autenticação da API
+ */
 @RestController
 @RequestMapping("/api/auth")
 @Tag(name = "Autenticação", description = "Endpoints para autenticação de usuários da API")
 public class AuthenticationController {
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
 
-    @Autowired
-    private UserDetailsService userDetailsService;
+    public AuthenticationController(AuthenticationManager authenticationManager, JwtService jwtService) {
+        this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
+    }
 
-    @Autowired
-    private JwtService jwtService;
-
-    
     @Operation(summary = "Autentica um usuário e retorna um token JWT",
             description = "Recebe email e senha e, se as credenciais forem válidas, retorna um token JWT para ser usado em requisições subsequentes.")
     @ApiResponses(value = {
@@ -48,16 +48,13 @@ public class AuthenticationController {
     })
     @PostMapping("/login")
     public ResponseEntity<AuthenticationResponse> login(@RequestBody @Valid AuthenticationRequest request) {
-        // Usa o AuthenticationManager para validar as credenciais
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getSenha())
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.email(), request.senha())
         );
 
-        // Se a autenticação passar, busca o usuário para gerar o token
-        final UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
-        final String token = jwtService.generateToken(userDetails);
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String token = jwtService.generateToken(userDetails);
 
-        // Retorna 200 OK com o token no corpo da resposta
         return ResponseEntity.ok(new AuthenticationResponse(token));
     }
 }

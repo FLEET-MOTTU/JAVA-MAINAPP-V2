@@ -32,53 +32,20 @@ public class Zona {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    // --- Getters e Setters ---
+    public Zona() {}
 
-    public UUID getId() {
-        return id;
-    }
+    public UUID getId() { return id; }
+    public String getNome() { return nome; }
+    public Pateo getPateo() { return pateo; }
+    public UsuarioAdmin getCriadoPor() { return criadoPor; }
+    public Polygon getCoordenadas() { return coordenadas; }
+    public Instant getCreatedAt() { return createdAt; }
 
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public String getNome() {
-        return nome;
-    }
-
-    public void setNome(String nome) {
-        this.nome = nome;
-    }
-
-    public Pateo getPateo() {
-        return pateo;
-    }
-
-    public void setPateo(Pateo pateo) {
-        this.pateo = pateo;
-    }
-
-    public UsuarioAdmin getCriadoPor() {
-        return criadoPor;
-    }
-
-    public void setCriadoPor(UsuarioAdmin criadoPor) {
-        this.criadoPor = criadoPor;
-    }
-
-    public Polygon getCoordenadas() {
-        return coordenadas;
-    }
-
-    public void setCoordenadas(Polygon coordenadas) {
-        this.coordenadas = coordenadas;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
+    public void setId(UUID id) { this.id = id; }
+    public void setNome(String nome) { this.nome = nome; }
+    public void setPateo(Pateo pateo) { this.pateo = pateo; }
+    public void setCriadoPor(UsuarioAdmin criadoPor) { this.criadoPor = criadoPor; }
+    public void setCoordenadas(Polygon coordenadas) { this.coordenadas = coordenadas; }
+    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    
 }

@@ -7,9 +7,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class LoginController {
 
     /**
-     * Este método simplesmente retorna o nome do arquivo HTML que deve ser
+     * Retorna o nome do arquivo HTML que deve ser
      * renderizado quando um usuário acessa a URL "/login" via GET.
-     * @return O nome da view "login". O Thymeleaf vai procurar por "login.html".
+     * @return O nome da view "login" pro Thymeleaf.
      */
     @GetMapping("/login")
     public String login() {

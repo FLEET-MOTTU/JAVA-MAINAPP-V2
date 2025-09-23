@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
+@Schema(description = "DTO para a criação de um novo funcionário por um Administrador de Pátio.")
 public class FuncionarioCreateRequest {
 
     @NotBlank(message = "O nome é obrigatório")
@@ -16,8 +17,9 @@ public class FuncionarioCreateRequest {
     private String telefone;
 
     @NotBlank(message = "O cargo é obrigatório")
-    @Schema(description = "Cargo do funcionário", example = "OPERACIONAL")
-    private String cargo; // Futuramente podemos validar com um ENUM
+    @Pattern(regexp = "OPERACIONAL|ADMINISTRATIVO|TEMPORARIO", message = "Cargo inválido. Valores aceitos: OPERACIONAL, ADMINISTRATIVO, TEMPORARIO")
+    @Schema(description = "Cargo do funcionário. Valores possíveis: OPERACIONAL, ADMINISTRATIVO, TEMPORARIO", example = "OPERACIONAL")
+    private String cargo;
 
     public String getNome() { return nome; }
     public String getTelefone() { return telefone; }

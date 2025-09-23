@@ -1,6 +1,7 @@
 package br.com.mottu.fleet.domain.service;
 
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
+import br.com.mottu.fleet.application.dto.OnboardingRequest;
 import br.com.mottu.fleet.application.dto.UsuarioAdminUpdateRequest;
 
 import java.util.List;
@@ -12,4 +13,5 @@ public interface UsuarioAdminService {
     void desativarPorId(UUID id);
     Optional<UsuarioAdmin> buscarPorId(UUID id);
     void atualizar(UsuarioAdminUpdateRequest request);
+    UsuarioAdmin criarAdminDePateo(OnboardingRequest request);
 }

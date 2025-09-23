@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
 
+
 @Entity
 @Table(name = "token_acesso")
 public class TokenAcesso {
@@ -28,6 +29,8 @@ public class TokenAcesso {
     @Column(nullable = false)
     private boolean usado;
     
+    public TokenAcesso() {}
+
     public UUID getId() { return id; }
     public String getToken() { return token; }
     public Funcionario getFuncionario() { return funcionario; }

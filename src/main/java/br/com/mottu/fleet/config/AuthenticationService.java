@@ -1,6 +1,7 @@
 package br.com.mottu.fleet.config;
 
 import br.com.mottu.fleet.domain.repository.UsuarioAdminRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -15,10 +16,10 @@ public class AuthenticationService implements UserDetailsService {
     private UsuarioAdminRepository repository;
 
     /**
-     * Este método é chamado pelo Spring Security toda vez que um usuário
+     * método roda toda vez que um usuário
      * tenta se autenticar.
-     * @param username O "username" que o usuário digitou no formulário (no nosso caso, o email).
-     * @return O UserDetails (nossa classe UsuarioAdmin) encontrado no banco.
+     * @param username O "username" que o usuário digitou no formulário (email).
+     * @return O UserDetails (UsuarioAdmin) encontrado no banco.
      * @throws UsernameNotFoundException se o usuário não for encontrado.
      */
     @Override

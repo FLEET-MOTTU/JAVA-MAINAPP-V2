@@ -1,9 +1,14 @@
 package br.com.mottu.fleet.domain.entity;
 
+import br.com.mottu.fleet.domain.enums.Status;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
+
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+
 
 @Entity
 @Table(name = "pateo")
@@ -23,25 +28,38 @@ public class Pateo {
     @JoinColumn(name = "gerenciado_por_id", nullable = false)
     private UsuarioAdmin gerenciadoPor;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status;
+    private Status status;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @OneToMany(
+            mappedBy = "pateo",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    private List<Zona> zonas = new ArrayList<>();
+
+    public Pateo() {}    
+
     public UUID getId() { return id; }
     public String getNome() { return nome; }
     public String getPlantaBaixaUrl() { return plantaBaixaUrl; }
     public UsuarioAdmin getGerenciadoPor() { return gerenciadoPor; }
-    public String getStatus() { return status; }
+    public Status getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }
+    public List<Zona> getZonas() { return zonas; }
 
     public void setId(UUID id) { this.id = id; }
     public void setNome(String nome) { this.nome = nome; }
     public void setPlantaBaixaUrl(String plantaBaixaUrl) { this.plantaBaixaUrl = plantaBaixaUrl; }
     public void setGerenciadoPor(UsuarioAdmin gerenciadoPor) { this.gerenciadoPor = gerenciadoPor; }
+    public void setStatus(Status status) { this.status = status; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
-    public void setStatus(String status) { this.status = status; }
+    public void setZonas(List<Zona> zonas) { this.zonas = zonas; }
     
 }
