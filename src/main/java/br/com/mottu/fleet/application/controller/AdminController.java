@@ -15,6 +15,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.locationtech.jts.io.WKTWriter;
 
 import java.util.UUID;
 
@@ -26,6 +27,8 @@ import java.util.UUID;
 @RequestMapping("/admin")
 @PreAuthorize("hasRole('SUPER_ADMIN')")
 public class AdminController {
+
+    private final WKTWriter wktWriter = new WKTWriter();
 
     private final OnboardingService onboardingService;
     private final UsuarioAdminService usuarioAdminService;
@@ -120,4 +123,23 @@ public class AdminController {
         redirectAttributes.addFlashAttribute("sucessoMessage", "Usuário e pátios associados foram desativados!");
         return "redirect:/admin/usuarios";
     }
+
+    /**
+     * Exibe os detalhes de um pátio específico, incluindo suas zonas.
+     * Usado apenas pelo super admin, ignora as regras normais de segurança.
+     */
+    @GetMapping("/pateos/{pateoId}")
+    public String exibirDetalhesPateo(@PathVariable UUID pateoId, Model model, HttpServletRequest request) {
+        
+        model.addAttribute("requestURI", request.getRequestURI());
+
+        return pateoService.buscarPorIdComZonas(pateoId)
+                .map(pateo -> {
+                    model.addAttribute("pateo", pateo);
+                    model.addAttribute("wktWriter", wktWriter);
+                    return "admin/detalhes-pateo";
+                })
+                .orElse("redirect:/admin/dashboard");
+    }
+
 }

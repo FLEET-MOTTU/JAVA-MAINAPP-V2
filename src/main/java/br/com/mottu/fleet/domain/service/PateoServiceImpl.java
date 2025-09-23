@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -64,4 +65,14 @@ public class PateoServiceImpl implements PateoService {
                 .stream().findFirst()
                 .orElseThrow(() -> new BusinessException("Admin não está associado a nenhum pátio."));
     }
+    
+    /**
+     * Método personalizado para buscar o pátio com suas zonas.
+     * Da Bypass nas regras de segurança normais, usado apenas para o super admin.
+     */
+    @Override
+    public Optional<Pateo> buscarPorIdComZonas(UUID pateoId) {
+        return pateoRepository.findPateoWithZonasById(pateoId);
+    }
+
 }

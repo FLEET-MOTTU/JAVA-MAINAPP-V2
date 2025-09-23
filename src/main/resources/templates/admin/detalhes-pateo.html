@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main-layout :: layout(~{::title}, ~{::section})}">
+<head>
+    <title th:text="'Detalhes do Pátio: ' + ${pateo.nome}"></title>
+</head>
+<body>
+<section>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 th:text="${pateo.nome}">Nome do Pátio</h1>
+        <a th:href="@{/admin/dashboard}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar para o Dashboard
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    Planta Baixa
+                </div>
+                <div class="card-body">
+                    <img th:if="${pateo.plantaBaixaUrl}" th:src="@{${pateo.plantaBaixaUrl}}" class="img-fluid" alt="Planta Baixa">
+                    <p th:unless="${pateo.plantaBaixaUrl}" class="text-muted">Nenhuma planta baixa cadastrada para este pátio.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    Zonas Cadastradas
+                </div>
+                <div class="card-body">
+                    <div th:if="${#lists.isEmpty(pateo.zonas)}" class="text-center text-muted p-3">
+                        Nenhuma zona cadastrada.
+                    </div>
+                    <ul th:unless="${#lists.isEmpty(pateo.zonas)}" class="list-group">
+                        <li th:each="zona : ${pateo.zonas}" class="list-group-item">
+                            <h6 class="mb-1" th:text="${zona.nome}">Nome da Zona</h6>
+                            <small class="text-muted font-monospace" th:text="${wktWriter.write(zona.coordenadas)}"></small>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>
