@@ -9,7 +9,6 @@ import br.com.mottu.fleet.config.JwtService;
 import br.com.mottu.fleet.domain.exception.InvalidTokenException;
 import br.com.mottu.fleet.domain.exception.ResourceNotFoundException;
 import br.com.mottu.fleet.domain.repository.FuncionarioRepository;
-import br.com.mottu.fleet.domain.service.PateoService;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
