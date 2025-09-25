@@ -8,8 +8,10 @@ import br.com.mottu.fleet.application.dto.OnboardingRequest;
 import br.com.mottu.fleet.application.dto.UsuarioAdminUpdateRequest;
 import br.com.mottu.fleet.domain.enums.Role;
 import br.com.mottu.fleet.domain.enums.Status;
+import br.com.mottu.fleet.domain.exception.BusinessException;
 import br.com.mottu.fleet.domain.exception.EmailAlreadyExistsException;
 import br.com.mottu.fleet.domain.exception.ResourceNotFoundException;
+import br.com.mottu.fleet.application.dto.PasswordChangeRequest;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -97,5 +99,15 @@ public class UsuarioAdminServiceImpl implements UsuarioAdminService {
         novoAdminPateo.setStatus(Status.ATIVO);
 
         return usuarioAdminRepository.save(novoAdminPateo);
+    }
+
+    @Override
+    @Transactional
+    public void alterarSenha(UsuarioAdmin adminLogado, PasswordChangeRequest request) {
+        if (!passwordEncoder.matches(request.currentPassword(), adminLogado.getPassword())) {
+            throw new BusinessException("A senha atual está incorreta.");
+        }
+        adminLogado.setSenha(passwordEncoder.encode(request.newPassword()));
+        usuarioAdminRepository.save(adminLogado);
     }
 }

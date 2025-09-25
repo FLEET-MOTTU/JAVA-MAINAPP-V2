@@ -8,6 +8,8 @@ import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 import br.com.mottu.fleet.domain.enums.Cargo;
 import br.com.mottu.fleet.domain.enums.Status;
 import br.com.mottu.fleet.domain.service.FuncionarioService;
+import br.com.mottu.fleet.application.dto.MagicLinkResponse;
+import br.com.mottu.fleet.domain.service.MagicLinkService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -31,13 +33,15 @@ import java.util.UUID;
 @RequestMapping("/api/funcionarios")
 @Tag(name = "Funcionários", description = "Endpoints para gerenciamento de funcionários por Administradores de Pátio")
 @SecurityRequirement(name = "bearerAuth")
-@PreAuthorize("hasRole('PATEO_ADMIN')") // Permissão pra toda a classe
+@PreAuthorize("hasRole('PATEO_ADMIN')")
 public class FuncionarioController {
 
     private final FuncionarioService funcionarioService;
+    private final MagicLinkService magicLinkService;
 
-    public FuncionarioController(FuncionarioService funcionarioService) {
+    public FuncionarioController(FuncionarioService funcionarioService, MagicLinkService magicLinkService) {
         this.funcionarioService = funcionarioService;
+        this.magicLinkService = magicLinkService;
     }
 
     @PostMapping
@@ -100,6 +104,16 @@ public class FuncionarioController {
 
         funcionarioService.desativar(id, adminLogado);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/regenerar-link")
+    @Operation(summary = "Gera um novo Magic Link para um funcionário existente")
+    public ResponseEntity<MagicLinkResponse> gerarNovoMagicLink(
+        @PathVariable UUID id,
+        @AuthenticationPrincipal UsuarioAdmin adminLogado) {
+
+        String novoLink = magicLinkService.regenerarLink(id, adminLogado);
+        return ResponseEntity.ok(new MagicLinkResponse(novoLink));
     }
 
     /**

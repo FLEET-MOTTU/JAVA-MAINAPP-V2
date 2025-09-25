@@ -2,44 +2,89 @@
 <html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/main-layout :: layout(~{::title}, ~{::section})}">
 <head>
-    <title th:text="'Detalhes do Pátio: ' + ${pateo.nome}"></title>
+    <title th:text="'Detalhes do Pátio: ' + ${viewModel.pateo().nome}"></title>
 </head>
 <body>
 <section>
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 th:text="${pateo.nome}">Nome do Pátio</h1>
-        <a th:href="@{/admin/dashboard}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Voltar para o Dashboard
-        </a>
+        <h1 th:text="${viewModel.pateo().nome}">Nome do Pátio</h1>
+        <a th:href="@{/admin/dashboard}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
     </div>
 
     <div class="row">
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    Planta Baixa
-                </div>
-                <div class="card-body">
-                    <img th:if="${pateo.plantaBaixaUrl}" th:src="@{${pateo.plantaBaixaUrl}}" class="img-fluid" alt="Planta Baixa">
-                    <p th:unless="${pateo.plantaBaixaUrl}" class="text-muted">Nenhuma planta baixa cadastrada para este pátio.</p>
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">Planta Baixa</div>
+                <div class="card-body text-center">
+                    <img th:if="${viewModel.pateo().plantaBaixaUrl}" th:src="@{${viewModel.pateo().plantaBaixaUrl}}" class="img-fluid" style="max-height: 400px;" alt="Planta Baixa">
+                    <p th:unless="${viewModel.pateo().plantaBaixaUrl}" class="text-muted">Nenhuma planta baixa cadastrada.</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    Zonas Cadastradas
-                </div>
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">Zonas Cadastradas</div>
                 <div class="card-body">
-                    <div th:if="${#lists.isEmpty(pateo.zonas)}" class="text-center text-muted p-3">
+                    <div th:if="${#lists.isEmpty(viewModel.zonas())}" class="text-center text-muted p-3">
                         Nenhuma zona cadastrada.
                     </div>
-                    <ul th:unless="${#lists.isEmpty(pateo.zonas)}" class="list-group">
-                        <li th:each="zona : ${pateo.zonas}" class="list-group-item">
-                            <h6 class="mb-1" th:text="${zona.nome}">Nome da Zona</h6>
-                            <small class="text-muted font-monospace" th:text="${wktWriter.write(zona.coordenadas)}"></small>
+                    <ul th:unless="${#lists.isEmpty(viewModel.zonas())}" class="list-group list-group-flush">
+                        <li th:each="zona : ${viewModel.zonas()}" class="list-group-item">
+                            <h6 class="mb-1" th:text="${zona.nome}"></h6>
+                            <small class="text-muted font-monospace" style="font-size: 0.75rem;" th:text="${wktWriter.write(zona.coordenadas)}"></small>
                         </li>
                     </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">Funcionários Cadastrados</div>
+                <div class="card-body">
+                    <div th:if="${generatedLink}" class="alert alert-info alert-dismissible fade show">
+                        <strong>Novo Magic Link gerado para <span th:text="${generatedForFuncionarioNome}"></span>:</strong>
+                        <input type="text" class="form-control mt-2" th:value="${generatedLink}" readonly>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                        <tr>
+                            <th>Nome</th>
+                            <th>Telefone</th>
+                            <th>Cargo</th>
+                            <th>Status</th>
+                            <th>Magic Link Válido</th>
+                            <th class="text-end">Ações (Super Admin)</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="funcVM : ${viewModel.funcionariosComLink()}">
+                                <td th:text="${funcVM.funcionario().nome}"></td>
+                                <td th:text="${funcVM.funcionario().telefone}" class="font-monospace"></td>
+                                <td th:text="${funcVM.funcionario().cargo.name()}"></td>
+                                <td>
+                                    <span class="badge"
+                                        th:classappend="${funcVM.funcionario().status.name() == 'ATIVO'} ? 'bg-success' : 'bg-secondary'"
+                                        th:text="${funcVM.funcionario().status.name()}"></span>
+                                </td>
+                                <td class="font-monospace" style="font-size: 0.8rem;">
+                                    <span th:if="${funcVM.magicLinkUrl().isPresent()}" th:text="${funcVM.magicLinkUrl().get()}"></span>
+                                    <span th:if="${funcVM.magicLinkUrl().isEmpty()}" class="text-muted fst-italic">Nenhum link válido</span>
+                                </td>
+                                <td class="text-end">
+                                    <form th:action="@{/admin/pateos/{pateoId}/funcionarios/{id}/gerar-link(pateoId=${viewModel.pateo().id}, id=${funcVM.funcionario().id})}" method="post">
+                                        <button type="submit" class="btn btn-sm btn-outline-success">
+                                            <i class="bi bi-link-45deg"></i> Gerar Novo Link
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            </tbody>
+                    </table>
                 </div>
             </div>
         </div>

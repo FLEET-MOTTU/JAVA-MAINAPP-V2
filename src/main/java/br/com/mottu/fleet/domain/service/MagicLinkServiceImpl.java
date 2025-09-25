@@ -1,11 +1,15 @@
 package br.com.mottu.fleet.domain.service;
 
 import br.com.mottu.fleet.domain.entity.Funcionario;
+import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.entity.TokenAcesso;
+import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 import br.com.mottu.fleet.domain.repository.TokenAcessoRepository;
 import br.com.mottu.fleet.config.JwtService;
 import br.com.mottu.fleet.domain.exception.InvalidTokenException;
 import br.com.mottu.fleet.domain.exception.ResourceNotFoundException;
+import br.com.mottu.fleet.domain.repository.FuncionarioRepository;
+import br.com.mottu.fleet.domain.service.PateoService;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -21,13 +25,19 @@ public class MagicLinkServiceImpl implements MagicLinkService {
     private final TokenAcessoRepository tokenAcessoRepository;
     private final JwtService jwtService;
     private final String baseUrl;
+    private final FuncionarioRepository funcionarioRepository;
+    private final PateoService pateoService;
 
     public MagicLinkServiceImpl(TokenAcessoRepository tokenAcessoRepository,
                                 JwtService jwtService,
-                                @Value("${application.base-url}") String baseUrl) {
+                                @Value("${application.base-url}") String baseUrl,
+                                FuncionarioRepository funcionarioRepository,
+                                PateoService pateoService) {
         this.tokenAcessoRepository = tokenAcessoRepository;
         this.jwtService = jwtService;
         this.baseUrl = baseUrl;
+        this.funcionarioRepository = funcionarioRepository;
+        this.pateoService = pateoService;
     }
 
     /**
@@ -79,5 +89,36 @@ public class MagicLinkServiceImpl implements MagicLinkService {
         tokenAcessoRepository.save(token);
 
         return jwtService.generateToken(token.getFuncionario());
-    }    
+    }
+
+    @Override
+    @Transactional
+    public String regenerarLink(UUID funcionarioId, UsuarioAdmin adminLogado) {
+        // Busca o funcionário e valida se ele existe
+        Funcionario funcionario = funcionarioRepository.findById(funcionarioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Funcionário não encontrado."));
+
+        // Validação de segurança: o admin só pode gerar links para funcionários do seu pátio
+        Pateo pateoDoAdmin = pateoService.buscarDetalhesDoPateo(null, adminLogado);
+        if (!pateoDoAdmin.getId().equals(funcionario.getPateo().getId())) {
+            throw new SecurityException("Acesso negado: você não pode gerar links para funcionários de outro pátio.");
+        }
+
+        return this.gerarLink(funcionario);
+    }
+
+    /**
+     * Gera um novo Magic Link para um funcionário a partir de seu ID.
+     * Este método é para uso interno ou por Super Admins, não
+     * realiza validações de posse.
+     *
+     * @param funcionarioId O ID do funcionário.
+     * @return A URL completa do novo Magic Link.
+     */
+    @Override
+    public String gerarLink(UUID funcionarioId) {
+        Funcionario funcionario = funcionarioRepository.findById(funcionarioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Funcionário com ID " + funcionarioId + " não encontrado."));
+        return this.gerarLink(funcionario);
+    }
 }

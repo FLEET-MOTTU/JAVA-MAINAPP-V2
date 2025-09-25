@@ -8,7 +8,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
+import java.util.Set;
+import java.util.HashSet;
 
 @Entity
 @Table(name = "pateo")
@@ -48,7 +49,10 @@ public class Pateo {
             orphanRemoval = true,
             fetch = FetchType.LAZY
     )
-    private List<Zona> zonas = new ArrayList<>();
+    private Set<Zona> zonas = new HashSet<>();
+
+    @OneToMany(mappedBy = "pateo", fetch = FetchType.LAZY)
+    private Set<Funcionario> funcionarios = new HashSet<>();
 
     public Pateo() {}    
 
@@ -60,7 +64,8 @@ public class Pateo {
     public UsuarioAdmin getGerenciadoPor() { return gerenciadoPor; }
     public Status getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }
-    public List<Zona> getZonas() { return zonas; }
+    public Set<Zona> getZonas() { return zonas; }
+    public Set<Funcionario> getFuncionarios() { return funcionarios; }
 
     public void setId(UUID id) { this.id = id; }
     public void setNome(String nome) { this.nome = nome; }
@@ -70,6 +75,7 @@ public class Pateo {
     public void setGerenciadoPor(UsuarioAdmin gerenciadoPor) { this.gerenciadoPor = gerenciadoPor; }
     public void setStatus(Status status) { this.status = status; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
-    public void setZonas(List<Zona> zonas) { this.zonas = zonas; }
+    public void setZonas(Set<Zona> zonas) { this.zonas = zonas; }
+    public void setFuncionarios(Set<Funcionario> funcionarios) { this.funcionarios = funcionarios; }
     
 }

@@ -1,10 +1,13 @@
 package br.com.mottu.fleet.application.controller;
 
 import br.com.mottu.fleet.application.dto.OnboardingRequest;
+import br.com.mottu.fleet.application.dto.PateoViewModel;
 import br.com.mottu.fleet.application.dto.UsuarioAdminUpdateRequest;
 import br.com.mottu.fleet.domain.service.OnboardingService;
 import br.com.mottu.fleet.domain.service.PateoService;
 import br.com.mottu.fleet.domain.service.UsuarioAdminService;
+import br.com.mottu.fleet.domain.repository.FuncionarioRepository;
+import br.com.mottu.fleet.domain.service.MagicLinkService;
 
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,14 +36,22 @@ public class AdminController {
     private final OnboardingService onboardingService;
     private final UsuarioAdminService usuarioAdminService;
     private final PateoService pateoService;
+    private final MagicLinkService magicLinkService;
+    private final FuncionarioRepository funcionarioRepository;
+
 
     public AdminController(OnboardingService onboardingService,
                            UsuarioAdminService usuarioAdminService,
-                           PateoService pateoService) {
+                           PateoService pateoService,
+                           MagicLinkService magicLinkService,
+                           FuncionarioRepository funcionarioRepository) {
         this.onboardingService = onboardingService;
         this.usuarioAdminService = usuarioAdminService;
         this.pateoService = pateoService;
+        this.magicLinkService = magicLinkService;
+        this.funcionarioRepository = funcionarioRepository;
     }
+
 
     /**
      * Exibe o dashboard principal com a lista de pátios ativos.
@@ -130,16 +141,30 @@ public class AdminController {
      */
     @GetMapping("/pateos/{pateoId}")
     public String exibirDetalhesPateo(@PathVariable UUID pateoId, Model model, HttpServletRequest request) {
-        
         model.addAttribute("requestURI", request.getRequestURI());
-
-        return pateoService.buscarPorIdComZonas(pateoId)
-                .map(pateo -> {
-                    model.addAttribute("pateo", pateo);
-                    model.addAttribute("wktWriter", wktWriter);
-                    return "admin/detalhes-pateo";
-                })
-                .orElse("redirect:/admin/dashboard");
+        
+        PateoViewModel viewModel = pateoService.prepararViewModelDeDetalhes(pateoId);
+        
+        model.addAttribute("viewModel", viewModel);
+        model.addAttribute("wktWriter", wktWriter);
+        
+        return "admin/detalhes-pateo";
     }
 
+    /**
+     * Gera um novo Magic Link para um funcionário específico de um pátio.
+     * Usado apenas pelo super admin, ignora as regras normais de segurança.
+     */
+    @PostMapping("/pateos/{pateoId}/funcionarios/{id}/gerar-link")
+    public String gerarNovoMagicLink(
+        @PathVariable UUID pateoId,
+        @PathVariable UUID id,
+        RedirectAttributes redirectAttributes) {
+
+        String link = magicLinkService.gerarLink(id);
+        redirectAttributes.addFlashAttribute("sucessoMessage", "Novo Magic Link gerado com sucesso!");
+        redirectAttributes.addFlashAttribute("generatedLink", link);
+        redirectAttributes.addFlashAttribute("generatedForFuncionarioNome", funcionarioRepository.findById(id).get().getNome());
+        return "redirect:/admin/pateos/" + pateoId;
+    }
 }
