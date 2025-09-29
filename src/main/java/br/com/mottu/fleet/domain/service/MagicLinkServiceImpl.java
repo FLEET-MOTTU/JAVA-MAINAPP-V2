@@ -108,8 +108,8 @@ public class MagicLinkServiceImpl implements MagicLinkService {
 
     /**
      * Gera um novo Magic Link para um funcionário a partir de seu ID.
-     * Este método é para uso interno ou por Super Admins, não
-     * realiza validações de posse.
+     * Este método é para uso interno para testes do painel de Super Admin, não
+     * realiza validações.
      *
      * @param funcionarioId O ID do funcionário.
      * @return A URL completa do novo Magic Link.

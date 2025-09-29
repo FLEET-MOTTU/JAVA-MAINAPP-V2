@@ -16,6 +16,7 @@
 6.  [Testando a API via Swagger](#6--testando-a-api-via-swagger)
 7.  [Estrutura do Projeto](#7-estrutura-do-projeto)
 8.  [Database Migrations](#8-database-migrations)
+9.  [Vídeo Demonstrativo](#9-video-explicativo)
 
 ---
 
@@ -155,3 +156,8 @@ O schema do banco de dados é gerenciado pelo **Flyway**. Todos os scripts de cr
 `src/main/resources/db/migration`
 
 O Flyway executa as migrações automaticamente na inicialização da aplicação, garantindo que o banco de dados esteja sempre na versão correta.
+
+---
+
+### 9. Vídeo Demonstrativo
+Link: https://youtu.be/TONDgj57ysE
