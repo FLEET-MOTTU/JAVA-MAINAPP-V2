@@ -1,14 +1,14 @@
 package br.com.mottu.fleet.application.controller;
 
-import br.com.mottu.fleet.application.dto.FuncionarioCreateRequest;
-import br.com.mottu.fleet.application.dto.FuncionarioResponse;
-import br.com.mottu.fleet.application.dto.FuncionarioUpdateRequest;
+import br.com.mottu.fleet.application.dto.api.FuncionarioCreateRequest;
+import br.com.mottu.fleet.application.dto.api.FuncionarioResponse;
+import br.com.mottu.fleet.application.dto.api.FuncionarioUpdateRequest;
+import br.com.mottu.fleet.application.dto.api.MagicLinkResponse;
 import br.com.mottu.fleet.domain.entity.Funcionario;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 import br.com.mottu.fleet.domain.enums.Cargo;
 import br.com.mottu.fleet.domain.enums.Status;
 import br.com.mottu.fleet.domain.service.FuncionarioService;
-import br.com.mottu.fleet.application.dto.MagicLinkResponse;
 import br.com.mottu.fleet.domain.service.MagicLinkService;
 
 import io.swagger.v3.oas.annotations.Operation;

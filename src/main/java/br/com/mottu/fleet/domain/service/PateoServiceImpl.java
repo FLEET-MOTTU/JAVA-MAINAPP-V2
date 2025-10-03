@@ -1,8 +1,8 @@
 package br.com.mottu.fleet.domain.service;
 
-import br.com.mottu.fleet.application.dto.FuncionarioViewModel;
-import br.com.mottu.fleet.application.dto.OnboardingRequest;
-import br.com.mottu.fleet.application.dto.PateoViewModel;
+import br.com.mottu.fleet.application.dto.web.FuncionarioViewModel;
+import br.com.mottu.fleet.application.dto.web.OnboardingRequest;
+import br.com.mottu.fleet.application.dto.web.PateoViewModel;
 import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.entity.TokenAcesso;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;

@@ -20,4 +20,7 @@ public interface PateoRepository extends JpaRepository<Pateo, UUID> {
 
     @Query("SELECT p FROM Pateo p LEFT JOIN FETCH p.zonas LEFT JOIN FETCH p.funcionarios WHERE p.id = :id")
     Optional<Pateo> findPateoWithDetailsById(@Param("id") UUID id);
+
+    Optional<Pateo> findFirstByGerenciadoPorId(UUID adminId);
+
 }

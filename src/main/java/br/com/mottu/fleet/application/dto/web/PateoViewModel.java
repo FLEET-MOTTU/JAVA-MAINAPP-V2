@@ -1,4 +1,4 @@
-package br.com.mottu.fleet.application.dto;
+package br.com.mottu.fleet.application.dto.web;
 
 import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.entity.Zona;

@@ -1,6 +1,6 @@
 package br.com.mottu.fleet.domain.service;
 
-import br.com.mottu.fleet.application.dto.ZonaRequest;
+import br.com.mottu.fleet.application.dto.api.ZonaRequest;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 import br.com.mottu.fleet.domain.entity.Zona;
 

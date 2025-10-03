@@ -1,4 +1,4 @@
-package br.com.mottu.fleet.application.dto;
+package br.com.mottu.fleet.application.dto.web;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;

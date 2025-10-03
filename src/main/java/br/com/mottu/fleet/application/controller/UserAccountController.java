@@ -1,6 +1,6 @@
 package br.com.mottu.fleet.application.controller;
 
-import br.com.mottu.fleet.application.dto.PasswordChangeRequest;
+import br.com.mottu.fleet.application.dto.api.PasswordChangeRequest;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 import br.com.mottu.fleet.domain.service.UsuarioAdminService;
 

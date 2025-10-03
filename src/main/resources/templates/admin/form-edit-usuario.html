@@ -13,7 +13,7 @@
                     <h3>Editar Administrador de Pátio</h3>
                 </div>
                 <div class="card-body">
-                    <form th:action="@{/admin/usuarios/editar}" th:object="${usuarioRequest}" method="post">
+                    <form th:action="@{/admin/usuarios/{id}/editar(id=*{id})}" th:object="${usuarioRequest}" method="post">
                         <input type="hidden" th:field="*{id}" />
 
                         <div class="mb-3">
@@ -25,6 +25,13 @@
                             <label for="nome" class="form-label">Nome</label>
                             <input type="text" id="nome" th:field="*{nome}" class="form-control" th:errorclass="is-invalid" />
                             <div class="invalid-feedback" th:if="${#fields.hasErrors('nome')}" th:errors="*{nome}"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">Nova Senha</label>
+                            <input type="password" id="newPassword" th:field="*{newPassword}" class="form-control" th:errorclass="is-invalid" />
+                            <div class="form-text">Deixe em branco para não alterar a senha atual.</div>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('newPassword')}" th:errors="*{newPassword}"></div>
                         </div>
 
                         <div class="d-flex justify-content-end mt-4">

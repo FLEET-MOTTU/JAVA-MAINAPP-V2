@@ -1,4 +1,4 @@
-package br.com.mottu.fleet.application.dto;
+package br.com.mottu.fleet.application.dto.web;
 
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 
@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 
 import java.util.UUID;
 
@@ -24,6 +25,10 @@ public class UsuarioAdminUpdateRequest {
             example = "adminpateo@mottu.com", accessMode = Schema.AccessMode.READ_ONLY)
     private String email;
 
+    @Pattern(regexp = "^$|.{8,}", message = "A nova senha deve ter no mínimo 8 caracteres, se fornecida.")
+    @Schema(description = "Nova senha para o administrador. Deixe em branco para não alterar.", example = "novaSenha@123")
+    private String newPassword;
+
     public static UsuarioAdminUpdateRequest fromEntity(UsuarioAdmin usuario) {
         UsuarioAdminUpdateRequest request = new UsuarioAdminUpdateRequest();
         request.setId(usuario.getId());
@@ -36,9 +41,11 @@ public class UsuarioAdminUpdateRequest {
     public UUID getId() { return id; }
     public String getNome() { return nome; }
     public String getEmail() { return email; }
+    public String getNewPassword() { return newPassword; }
 
     public void setId(UUID id) { this.id = id; }
     public void setNome(String nome) { this.nome = nome; }
     public void setEmail(String email) { this.email = email; }
+    public void setNewPassword(String newPassword) { this.newPassword = newPassword; }
 
 }

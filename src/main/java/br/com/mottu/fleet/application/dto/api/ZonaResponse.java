@@ -1,4 +1,4 @@
-package br.com.mottu.fleet.application.dto;
+package br.com.mottu.fleet.application.dto.api;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.UUID;

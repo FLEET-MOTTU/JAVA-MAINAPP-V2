@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -23,6 +24,11 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 
+/**
+ * Handler global para exceções. Centraliza o tratamento de erros, decidindo
+ * o formato da resposta (JSON para API, Redirect para Web) com base na
+ * origem da requisição.
+ */
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -38,27 +44,25 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Regra de Negócio: Se a criação de um admin pelo painel falhar por email duplicado,
-     * o usuário deve ser redirecionado de volta ao formulário com uma mensagem de erro clara.
-     * Este handler é específico para o fluxo web do Thymeleaf.
+     * Handler específico para o fluxo de onboarding via Thymeleaf.
+     * Captura o erro de email duplicado e redireciona para o formulário.
      */
     @ExceptionHandler(EmailAlreadyExistsException.class)
     public String handleEmailAlreadyExistsForWeb(EmailAlreadyExistsException ex, RedirectAttributes redirectAttributes) {
         redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         return "redirect:/admin/onboarding/novo";
     }
-
+    
     /**
-     * Handler para exceções que podem ocorrer tanto na API quanto no fluxo de Magic Link.
-     * Regra de Negócio:
-     * 1. Se o erro ocorrer durante a validação do Magic Link (rota /auth/validar-token),
-     * a resposta DEVE ser um redirecionamento para o deep link de erro do app mobile.
-     * 2. Se o erro ocorrer em qualquer outra rota (API), a resposta DEVE ser um JSON padronizado.
+     * Handler unificado para exceções de regra de negócio, validação ou recursos não encontrados.
+     * Ele inspeciona a URI da requisição para decidir a resposta apropriada.
      */
-    @ExceptionHandler({ResourceNotFoundException.class, InvalidTokenException.class, BusinessException.class})
-    public Object handleApiAndMagicLinkExceptions(RuntimeException ex, HttpServletRequest request) {
-        // Verifica se a requisição veio do fluxo de validação do Magic Link
-        if ("/auth/validar-token".equals(request.getRequestURI())) {
+    @ExceptionHandler({ResourceNotFoundException.class, InvalidTokenException.class, BusinessException.class, SecurityException.class})
+    public Object handleContextAwareExceptions(RuntimeException ex, HttpServletRequest request, RedirectAttributes redirectAttributes) {
+        String requestUri = request.getRequestURI();
+
+        // Erro no fluxo de validação do Magic Link eedireciona para o deep link do app
+        if ("/auth/validar-token".equals(requestUri)) {
             String encodedMessage = URLEncoder.encode(ex.getMessage(), StandardCharsets.UTF_8);
             String errorUrl = UriComponentsBuilder.fromUriString(deepLinkBaseUrl + deepLinkErrorPath)
                     .queryParam("message", encodedMessage)
@@ -66,13 +70,23 @@ public class GlobalExceptionHandler {
             return new RedirectView(errorUrl);
         }
 
-        // Caso contrário, trata como um erro de API e retorna JSON
+        // Erro no Painel Web (qualquer rota que NÃO seja /api/) redireciona para a página anterior
+        if (!requestUri.startsWith("/api/")) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Erro: " + ex.getMessage());
+            String referer = request.getHeader("Referer");
+            return "redirect:" + (referer != null ? referer : "/admin/dashboard");
+        }
+        
+        // Erro na API REST retorna uma resposta JSON
         HttpStatus status;
         String error;
 
         if (ex instanceof ResourceNotFoundException) {
             status = HttpStatus.NOT_FOUND;
             error = "Recurso não encontrado";
+        } else if (ex instanceof SecurityException) {
+            status = HttpStatus.FORBIDDEN;
+            error = "Acesso Negado";
         } else { // BusinessException e InvalidTokenException
             status = HttpStatus.BAD_REQUEST;
             error = "Requisição inválida";
@@ -80,20 +94,19 @@ public class GlobalExceptionHandler {
 
         return buildErrorResponse(ex, status, error, request);
     }
-
+    
     /**
-     * Handler para exceções de segurança na API (acesso negado).
-     * Retorna um status 403 Forbidden com um corpo de erro padronizado.
+     * Handler específico para falhas de autenticação na API (usuário/senha inválidos).
+     * Retorna um status 401 Unauthorized com uma mensagem clara.
      */
-    @ExceptionHandler(SecurityException.class)
-    public ResponseEntity<ErrorResponse> handleSecurityException(SecurityException ex, HttpServletRequest request) {
-        return buildErrorResponse(ex, HttpStatus.FORBIDDEN, "Acesso Negado", request);
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(HttpServletRequest request) {
+        String mensagem = "Usuário inexistente ou senha inválida";
+        return buildErrorResponse(new RuntimeException(mensagem), HttpStatus.UNAUTHORIZED, "Não Autorizado", request);
     }
 
     /**
-     * Handler "pega-tudo" para erros inesperados que ocorrem na API.
-     * Garante que nenhuma exceção vaze sem tratamento, sempre retornando um JSON padronizado.
-     * Retorna um status 500 Internal Server Error.
+     * Handler para erros inesperados que ocorrem na API.
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleAllApiExceptions(Exception ex, HttpServletRequest request) {
@@ -101,7 +114,7 @@ public class GlobalExceptionHandler {
             log.error("Erro inesperado na API na rota {}: {}", request.getRequestURI(), ex.getMessage(), ex);
             return buildErrorResponse(ex, HttpStatus.INTERNAL_SERVER_ERROR, "Erro Interno do Servidor", request);
         }
-        // Se não for rota da API, relança a exceção para o Spring tratar (Whitelabel Error Page)
+        // Se não for uma rota da API, relança a exceção para o Spring tratar e mostrar a Whitelabel Error Page
         throw new RuntimeException(ex);
     }
 

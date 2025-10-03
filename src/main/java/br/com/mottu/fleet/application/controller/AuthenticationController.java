@@ -1,7 +1,7 @@
 package br.com.mottu.fleet.application.controller;
 
-import br.com.mottu.fleet.application.dto.AuthenticationRequest;
-import br.com.mottu.fleet.application.dto.AuthenticationResponse;
+import br.com.mottu.fleet.application.dto.api.AuthenticationRequest;
+import br.com.mottu.fleet.application.dto.api.AuthenticationResponse;
 import br.com.mottu.fleet.config.JwtService;
 
 import io.swagger.v3.oas.annotations.Operation;

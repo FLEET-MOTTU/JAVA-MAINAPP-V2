@@ -1,6 +1,6 @@
 package br.com.mottu.fleet.domain.service;
 
-import br.com.mottu.fleet.application.dto.OnboardingRequest;
+import br.com.mottu.fleet.application.dto.web.OnboardingRequest;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 
 import org.springframework.beans.factory.annotation.Autowired;

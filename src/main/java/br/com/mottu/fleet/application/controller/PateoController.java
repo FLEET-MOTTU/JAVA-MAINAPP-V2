@@ -1,7 +1,7 @@
 package br.com.mottu.fleet.application.controller;
 
-import br.com.mottu.fleet.application.dto.PateoDetailResponse;
-import br.com.mottu.fleet.application.dto.ZonaResponse;
+import br.com.mottu.fleet.application.dto.api.PateoDetailResponse;
+import br.com.mottu.fleet.application.dto.api.ZonaResponse;
 import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 import br.com.mottu.fleet.domain.service.PateoService;

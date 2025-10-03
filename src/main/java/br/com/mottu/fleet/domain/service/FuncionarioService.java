@@ -1,7 +1,7 @@
 package br.com.mottu.fleet.domain.service;
 
-import br.com.mottu.fleet.application.dto.FuncionarioCreateRequest;
-import br.com.mottu.fleet.application.dto.FuncionarioUpdateRequest;
+import br.com.mottu.fleet.application.dto.api.FuncionarioCreateRequest;
+import br.com.mottu.fleet.application.dto.api.FuncionarioUpdateRequest;
 import br.com.mottu.fleet.domain.entity.Funcionario;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 import br.com.mottu.fleet.domain.enums.Cargo;

@@ -13,46 +13,82 @@
         </a>
     </div>
 
+    <div class="card shadow-sm mb-4">
+        <div class="card-body d-flex justify-content-end align-items-center">
+            <form th:action="@{/admin/usuarios}" method="get" class="d-flex align-items-center">
+                <label for="status" class="form-label me-2 mb-0">Filtrar por Status:</label>
+                <select id="status" name="status" class="form-select me-2" style="width: auto;" onchange="this.form.submit()">
+                    <option value="ATIVO" th:selected="${filtroStatus == 'ATIVO'}">Ativos</option>
+                    <option value="REMOVIDO" th:selected="${filtroStatus == 'REMOVIDO'}">Removidos</option>
+                    <option value="SUSPENSO" th:selected="${filtroStatus == 'SUSPENSO'}">Suspensos</option>
+                </select>
+            </form>
+        </div>
+    </div>
+
     <div class="card shadow-sm">
         <div class="card-body">
             <table class="table table-hover align-middle">
                 <thead class="table-dark">
                 <tr>
+                    <th>ID do Admin</th>
                     <th>Nome</th>
                     <th>Email</th>
+                    <th>Pátio Responsável</th>
                     <th>Status</th>
-                    <th>Data de Criação</th>
                     <th class="text-end">Ações</th>
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="usuario : ${usuarios}">
-                    <td th:text="${usuario.nome}">Nome do Admin</td>
-                    <td th:text="${usuario.email}">email@admin.com</td>
+                <tr th:each="vm : ${adminsPage.content}">
+                    <td><small class="text-muted font-monospace" th:text="${vm.admin().id}"></small></td>
+                    <td th:text="${vm.admin().nome}"></td>
+                    <td th:text="${vm.admin().email}"></td>
+                    <td th:text="${vm.nomePateo()}"></td>
                     <td>
                         <span class="badge"
-                              th:classappend="${usuario.status.name() == 'ATIVO'} ? 'bg-success' : 'bg-danger'"
-                              th:text="${usuario.status.name()}">
-                        </span>
+                              th:classappend="${vm.admin().status.name() == 'ATIVO'} ? 'bg-success' : (${vm.admin().status.name() == 'SUSPENSO'} ? 'bg-warning text-dark' : 'bg-danger')"
+                              th:text="${vm.admin().status.name()}"></span>
                     </td>
-                    <td th:text="${#temporals.format(usuario.createdAt, 'dd/MM/yyyy HH:mm')}">01/01/2025</td>
                     <td class="text-end">
-                        <a th:href="@{/admin/usuarios/{id}/editar(id=${usuario.id})}" class="btn btn-sm btn-outline-warning" title="Editar">
-                            <i class="bi bi-pencil-square"></i>
-                        </a>
-                        <form th:action="@{/admin/usuarios/{id}/desativar(id=${usuario.id})}" method="post" class="d-inline"
-                              onsubmit="return confirm('Isso desativará o usuário E todos os pátios gerenciados por ele. Confirma?');">
-                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Desativar">
-                                <i class="bi bi-trash-fill"></i>
+                        <form th:if="${vm.admin().status.name() == 'REMOVIDO'}" th:action="@{/admin/usuarios/{id}/reativar(id=${vm.admin().id})}" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-success" title="Reativar">
+                                <i class="bi bi-arrow-counterclockwise"></i>
                             </button>
                         </form>
+
+                        <div th:if="${vm.admin().status.name() != 'REMOVIDO'}" class="d-inline">
+                             <a th:href="@{/admin/usuarios/{id}/editar(id=${vm.admin().id})}" class="btn btn-sm btn-outline-warning" title="Editar">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <form th:action="@{/admin/usuarios/{id}/desativar(id=${vm.admin().id})}" method="post" class="d-inline"
+                                  onsubmit="return confirm('Isso desativará o usuário E todos os pátios gerenciados por ele. Confirma?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Desativar">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
-                <tr th:if="${#lists.isEmpty(usuarios)}">
-                    <td colspan="5" class="text-center p-4">Nenhum administrador de pátio cadastrado.</td>
+                <tr th:if="${adminsPage.empty}">
+                    <td colspan="6" class="text-center p-4">Nenhum administrador encontrado para este filtro.</td>
                 </tr>
                 </tbody>
             </table>
+
+            <nav th:if="${adminsPage.totalPages > 1}">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item" th:classappend="${adminsPage.first} ? 'disabled'">
+                        <a class="page-link" th:href="@{/admin/usuarios(page=${adminsPage.number-1}, status=${filtroStatus})}">Anterior</a>
+                    </li>
+                    <li class="page-item" th:each="i : ${#numbers.sequence(0, adminsPage.totalPages - 1)}" th:classappend="${i == adminsPage.number} ? 'active'">
+                        <a class="page-link" th:href="@{/admin/usuarios(page=${i}, status=${filtroStatus})}" th:text="${i + 1}"></a>
+                    </li>
+                    <li class="page-item" th:classappend="${adminsPage.last} ? 'disabled'">
+                        <a class="page-link" th:href="@{/admin/usuarios(page=${adminsPage.number+1}, status=${filtroStatus})}">Próximo</a>
+                    </li>
+                </ul>
+            </nav>
         </div>
     </div>
 </section>
