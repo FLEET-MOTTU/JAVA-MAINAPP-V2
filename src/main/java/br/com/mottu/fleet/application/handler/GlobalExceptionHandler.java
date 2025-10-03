@@ -14,6 +14,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -23,6 +25,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.stream.Collectors;
 
 /**
  * Handler global para exceções. Centraliza o tratamento de erros, decidindo
@@ -116,6 +119,20 @@ public class GlobalExceptionHandler {
         }
         // Se não for uma rota da API, relança a exceção para o Spring tratar e mostrar a Whitelabel Error Page
         throw new RuntimeException(ex);
+    }
+
+    /**
+     * Handler para exceções de validação de DTOs (@Valid).
+     * Captura os erros, formata uma mensagem clara e retorna um status 400 Bad Request.
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex, HttpServletRequest request) {
+        String errors = ex.getBindingResult().getFieldErrors().stream()
+                .map(FieldError::getDefaultMessage)
+                .collect(Collectors.joining(", "));
+
+        String mensagem = "Erro de validação: " + errors;
+        return buildErrorResponse(new RuntimeException(mensagem), HttpStatus.BAD_REQUEST, "Requisição Inválida", request);
     }
 
     private ResponseEntity<ErrorResponse> buildErrorResponse(Exception ex, HttpStatus status, String error, HttpServletRequest request) {

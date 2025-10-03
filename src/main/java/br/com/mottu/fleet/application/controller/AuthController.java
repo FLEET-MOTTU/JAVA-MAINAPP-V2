@@ -1,6 +1,8 @@
 package br.com.mottu.fleet.application.controller;
 
 import br.com.mottu.fleet.domain.service.MagicLinkService;
+import br.com.mottu.fleet.domain.entity.AuthCode;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,15 +32,18 @@ public class AuthController {
     }
 
     /**
-     * Valida um token de Magic Link e redireciona o usuário para o deep link de sucesso.
-     * Casos de erro são capturados pelo GlobalExceptionHandler.
+     * Valida um token de Magic Link. Se válido, gera um código de autorização (AuthCode)
+     * e redireciona o usuário para o deep link do app mobile, passando o código como parâmetro.
+     * @param valor O token de uso único recebido da URL do Magic Link.
+     * @return Um RedirectView que instrui o navegador a abrir o app mobile com o AuthCode.
      */
     @GetMapping("/validar-token")
     public RedirectView validarToken(@RequestParam String valor) {
-        String sessionToken = magicLinkService.validarTokenEGerarJwt(valor);
+        AuthCode authCode = magicLinkService.validarMagicLinkEGerarAuthCode(valor);
 
+        // Monta URL
         String successUrl = UriComponentsBuilder.fromUriString(deepLinkBaseUrl + deepLinkSuccessPath)
-                .queryParam("token", sessionToken)
+                .queryParam("code", authCode.getCode())
                 .toUriString();
 
         return new RedirectView(successUrl);

@@ -1,0 +1,18 @@
+CREATE TABLE auth_code (
+    id BINARY(16) NOT NULL PRIMARY KEY,
+    code VARCHAR(255) NOT NULL UNIQUE,
+    funcionario_id BINARY(16) NOT NULL,
+    usado BOOLEAN NOT NULL DEFAULT FALSE,
+    expira_em TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (funcionario_id) REFERENCES funcionario(id) ON DELETE CASCADE
+);
+
+CREATE TABLE refresh_token (
+    id BINARY(16) NOT NULL PRIMARY KEY,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    funcionario_id BINARY(16) NOT NULL,
+    expira_em TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (funcionario_id) REFERENCES funcionario(id) ON DELETE CASCADE
+);

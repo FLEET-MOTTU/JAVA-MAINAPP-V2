@@ -126,5 +126,5 @@ public class FuncionarioController {
                 funcionario.getTelefone(),
                 magicLinkUrl
         );
-    }
+    }    
 }
