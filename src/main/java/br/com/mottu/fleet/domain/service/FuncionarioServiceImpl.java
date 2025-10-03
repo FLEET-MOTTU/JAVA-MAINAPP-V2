@@ -13,7 +13,6 @@ import br.com.mottu.fleet.domain.repository.FuncionarioRepository;
 import br.com.mottu.fleet.domain.repository.PateoRepository;
 import br.com.mottu.fleet.domain.repository.specification.FuncionarioSpecification;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,39 +20,66 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Implementação do serviço que contém as regras de negócio para
+ * o gerenciamento de Funcionários.
+ */
 @Service
 public class FuncionarioServiceImpl implements FuncionarioService {
 
     private final FuncionarioRepository funcionarioRepository;
     private final PateoRepository pateoRepository;
     private final MagicLinkService magicLinkService;
+    private final NotificationService notificationService;
 
-    @Autowired
-    public FuncionarioServiceImpl(FuncionarioRepository funcionarioRepository, PateoRepository pateoRepository, MagicLinkService magicLinkService) {
+    public FuncionarioServiceImpl(FuncionarioRepository funcionarioRepository,
+                                  PateoRepository pateoRepository,
+                                  MagicLinkService magicLinkService,
+                                  NotificationService notificationService) {
         this.funcionarioRepository = funcionarioRepository;
         this.pateoRepository = pateoRepository;
         this.magicLinkService = magicLinkService;
+        this.notificationService = notificationService;
     }
 
+
+    /**
+     * Cria um novo funcionário, gera um Magic Link para seu primeiro acesso e dispara
+     * a notificação (via WhatsApp) com o link.
+     * @param request DTO com os dados do novo funcionário.
+     * @param adminLogado O admin de pátio autenticado que está realizando a operação.
+     * @return A entidade Funcionario recém-criada e salva.
+     */
     @Override
     @Transactional
-    public FuncionarioCriado criar(FuncionarioCreateRequest request, UsuarioAdmin adminLogado) {
+    public Funcionario criar(FuncionarioCreateRequest request, UsuarioAdmin adminLogado) {
         Pateo pateo = getPateoDoAdmin(adminLogado);
 
         Funcionario novoFuncionario = new Funcionario();
         novoFuncionario.setNome(request.getNome());
         novoFuncionario.setTelefone(request.getTelefone());
+        novoFuncionario.setCodigo("FUNC-" + request.getTelefone());        
         novoFuncionario.setPateo(pateo);
-        novoFuncionario.setCargo(parseCargo(request.getCargo()));
-        novoFuncionario.setStatus(Status.ATIVO);
-        novoFuncionario.setCodigo("FUNC-" + request.getTelefone());
+        novoFuncionario.setStatus(Status.ATIVO);        
+        novoFuncionario.setCargo(Cargo.valueOf(request.getCargo()));
 
         Funcionario funcionarioSalvo = funcionarioRepository.save(novoFuncionario);
-        String link = magicLinkService.gerarLink(funcionarioSalvo);
 
-        return new FuncionarioCriado(funcionarioSalvo, link);
+        String link = magicLinkService.gerarLink(funcionarioSalvo);
+        notificationService.enviarMagicLinkPorWhatsapp(funcionarioSalvo, link);
+
+        return funcionarioSalvo;
     }
 
+
+    /**
+     * Lista os funcionários de um pátio com base em filtros opcionais.
+     * A busca é restrita ao pátio do administrador que está fazendo a requisição.
+     * @param adminLogado O admin de pátio autenticado.
+     * @param status Filtro opcional por status do funcionário. Se nulo, busca apenas ATIVOS.
+     * @param cargo Filtro opcional por cargo do funcionário.
+     * @return Uma lista de entidades Funcionario que correspondem aos filtros.
+     */
     @Override
     public List<Funcionario> listarPorAdminEfiltros(UsuarioAdmin adminLogado, Status status, Cargo cargo) {
         Pateo pateo = getPateoDoAdmin(adminLogado);
@@ -62,6 +88,16 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         return funcionarioRepository.findAll(spec);
     }
 
+
+    /**
+     * Atualiza os dados de um funcionário existente.
+     * @param id O UUID do funcionário a ser atualizado.
+     * @param request DTO com os novos dados.
+     * @param adminLogado O admin de pátio autenticado, para validação de segurança.
+     * @return A entidade Funcionario atualizada.
+     * @throws SecurityException se o funcionário não pertencer ao pátio do admin.
+     * @throws BusinessException se o funcionário já estiver removido.
+     */
     @Override
     @Transactional
     public Funcionario atualizar(UUID id, FuncionarioUpdateRequest request, UsuarioAdmin adminLogado) {
@@ -74,12 +110,18 @@ public class FuncionarioServiceImpl implements FuncionarioService {
 
         funcionario.setNome(request.getNome());
         funcionario.setTelefone(request.getTelefone());
-        funcionario.setCargo(parseCargo(request.getCargo()));
-        funcionario.setStatus(parseStatusUpdate(request.getStatus()));
+        funcionario.setCargo(Cargo.valueOf(request.getCargo()));
+        funcionario.setStatus(Status.valueOf(request.getStatus()));
 
         return funcionarioRepository.save(funcionario);
     }
 
+
+    /**
+     * Realiza o "soft delete" de um funcionário, alterando seu status para REMOVIDO.
+     * @param id O UUID do funcionário a ser desativado.
+     * @param adminLogado O admin de pátio autenticado, para validação de segurança.
+     */
     @Override
     @Transactional
     public void desativar(UUID id, UsuarioAdmin adminLogado) {
@@ -91,11 +133,10 @@ public class FuncionarioServiceImpl implements FuncionarioService {
     }
 
     
-    // Métodos aux.
+    // Métodos Auxiliares
 
     private Pateo getPateoDoAdmin(UsuarioAdmin adminLogado) {
-        return pateoRepository.findAllByGerenciadoPorId(adminLogado.getId())
-                .stream().findFirst()
+        return pateoRepository.findFirstByGerenciadoPorId(adminLogado.getId())
                 .orElseThrow(() -> new BusinessException("Admin não está associado a nenhum pátio."));
     }
 
@@ -108,25 +149,4 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         }
         return funcionario;
     }
-
-    private Cargo parseCargo(String cargoStr) {
-        try {
-            return Cargo.valueOf(cargoStr.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new BusinessException("Cargo inválido: " + cargoStr);
-        }
-    }
-
-    private Status parseStatusUpdate(String statusStr) {
-        try {
-            Status novoStatus = Status.valueOf(statusStr.toUpperCase());
-            if (novoStatus == Status.REMOVIDO) {
-                throw new BusinessException("Para remover um funcionário, utilize o endpoint DELETE.");
-            }
-            return novoStatus;
-        } catch (IllegalArgumentException e) {
-            throw new BusinessException("Status inválido: " + statusStr);
-        }
-    }
-    
 }

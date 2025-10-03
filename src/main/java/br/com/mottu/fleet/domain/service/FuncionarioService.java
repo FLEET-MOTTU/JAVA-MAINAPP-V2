@@ -13,7 +13,7 @@ import java.util.UUID;
 public interface FuncionarioService {
     record FuncionarioCriado(Funcionario funcionario, String magicLink) {}
 
-    FuncionarioCriado criar(FuncionarioCreateRequest request, UsuarioAdmin adminLogado);
+    Funcionario criar(FuncionarioCreateRequest request, UsuarioAdmin adminLogado);
     List<Funcionario> listarPorAdminEfiltros(UsuarioAdmin adminLogado, Status status, Cargo cargo);
     Funcionario atualizar(UUID id, FuncionarioUpdateRequest request, UsuarioAdmin adminLogado);
     void desativar(UUID id, UsuarioAdmin adminLogado);

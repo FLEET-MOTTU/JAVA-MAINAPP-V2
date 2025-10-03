@@ -45,7 +45,7 @@ public class FuncionarioController {
     }
 
     @PostMapping
-    @Operation(summary = "Cadastra um novo funcionário e gera seu Magic Link")
+    @Operation(summary = "Cadastra um novo funcionário e dispara o envio do Magic Link por WhatsApp")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Funcionário criado com sucesso"),
             @ApiResponse(responseCode = "400", description = "Dados da requisição inválidos")
@@ -54,13 +54,12 @@ public class FuncionarioController {
             @Valid @RequestBody FuncionarioCreateRequest request,
             @AuthenticationPrincipal UsuarioAdmin adminLogado) {
 
-        FuncionarioService.FuncionarioCriado resultado = funcionarioService.criar(request, adminLogado);
-
-        FuncionarioResponse response = toFuncionarioResponse(resultado.funcionario(), resultado.magicLink());
+        Funcionario funcionarioCriado = funcionarioService.criar(request, adminLogado);
+        FuncionarioResponse response = toFuncionarioResponse(funcionarioCriado);
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest().path("/{id}")
-                .buildAndExpand(resultado.funcionario().getId()).toUri();
+                .buildAndExpand(funcionarioCriado.getId()).toUri();
 
         return ResponseEntity.created(location).body(response);
     }
@@ -72,9 +71,9 @@ public class FuncionarioController {
             @RequestParam(required = false) Cargo cargo,
             @AuthenticationPrincipal UsuarioAdmin adminLogado) {
 
-        List<Funcionario> funcionarios = funcionarioService.listarPorAdminEfiltros(adminLogado, status, cargo);
+        List<Funcionario> funcionarios = funcionarioService.listarPorAdminEfiltros(adminLogado, status, cargo);        
         List<FuncionarioResponse> response = funcionarios.stream()
-                .map(f -> toFuncionarioResponse(f, null))
+                .map(this::toFuncionarioResponse)
                 .toList();
 
         return ResponseEntity.ok(response);
@@ -88,7 +87,7 @@ public class FuncionarioController {
             @AuthenticationPrincipal UsuarioAdmin adminLogado) {
 
         Funcionario funcionarioAtualizado = funcionarioService.atualizar(id, request, adminLogado);
-        FuncionarioResponse response = toFuncionarioResponse(funcionarioAtualizado, null);
+        FuncionarioResponse response = toFuncionarioResponse(funcionarioAtualizado);
         return ResponseEntity.ok(response);
     }
 
@@ -119,12 +118,11 @@ public class FuncionarioController {
     /**
      * Método auxiliar pra converter a entidade Funcionario em uma DTO de resposta.
      */
-    private FuncionarioResponse toFuncionarioResponse(Funcionario funcionario, String magicLinkUrl) {
+    private FuncionarioResponse toFuncionarioResponse(Funcionario funcionario) {
         return new FuncionarioResponse(
                 funcionario.getId(),
                 funcionario.getNome(),
-                funcionario.getTelefone(),
-                magicLinkUrl
+                funcionario.getTelefone()
         );
-    }    
+    }
 }

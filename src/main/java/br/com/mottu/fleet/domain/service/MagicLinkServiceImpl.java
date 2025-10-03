@@ -184,7 +184,7 @@ public class MagicLinkServiceImpl implements MagicLinkService {
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setFuncionario(funcionario);
         refreshToken.setToken(UUID.randomUUID().toString());
-        refreshToken.setExpiraEm(Instant.now().plus(360, ChronoUnit.DAYS)); // Validade de 1 ano
+        refreshToken.setExpiraEm(Instant.now().plus(30, ChronoUnit.DAYS)); // Validade de 1 mês
         refreshTokenRepository.save(refreshToken);
 
         return new TokenResponse(accessToken, refreshToken.getToken());

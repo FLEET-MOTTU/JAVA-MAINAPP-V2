@@ -8,22 +8,22 @@ import jakarta.validation.constraints.Pattern;
 public class FuncionarioUpdateRequest {
 
     @NotBlank(message = "O nome é obrigatório")
-    @Schema(description = "Novo nome completo do funcionário", example = "João da Silva Santos")
+    @Schema(description = "Nome completo do funcionário", example = "João da Silva Santos")
     private String nome;
 
     @NotBlank(message = "O telefone é obrigatório")
-    @Pattern(regexp = "^[0-9]{10,11}$", message = "O telefone deve conter apenas números, com DDD")
-    @Schema(description = "Novo telefone do funcionário", example = "11987654322")
+    @Pattern(regexp = "^[0-9]{10,11}$", message = "O telefone deve conter apenas números, com DDD (10 ou 11 dígitos)")
+    @Schema(description = "Telefone do funcionário (apenas números, com DDD)", example = "11987654321")
     private String telefone;
 
     @NotBlank(message = "O cargo é obrigatório")
     @Pattern(regexp = "OPERACIONAL|ADMINISTRATIVO|TEMPORARIO", message = "Cargo inválido. Valores aceitos: OPERACIONAL, ADMINISTRATIVO, TEMPORARIO")
-    @Schema(description = "Novo cargo do funcionário. Valores possíveis: OPERACIONAL, ADMINISTRATIVO, TEMPORARIO", example = "ADMINISTRATIVO")
+    @Schema(description = "Cargo do funcionário. Valores possíveis: OPERACIONAL, ADMINISTRATIVO, TEMPORARIO", example = "OPERACIONAL")
     private String cargo;
 
     @NotBlank(message = "O status é obrigatório")
-    @Pattern(regexp = "ATIVO|SUSPENSO", message = "Para atualização, o status deve ser ATIVO ou SUSPENSO.")
-    @Schema(description = "Novo status do funcionário. Válidos para atualização: ATIVO, SUSPENSO", example = "SUSPENSO")
+    @Pattern(regexp = "ATIVO|SUSPENSO", message = "Status inválido. Para remover, use o endpoint DELETE. Valores aceitos: ATIVO, SUSPENSO")
+    @Schema(description = "Status do funcionário. Valores possíveis: ATIVO, SUSPENSO", example = "ATIVO")
     private String status;
     
     public String getNome() { return nome; }
