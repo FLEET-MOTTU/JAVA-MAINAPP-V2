@@ -1,20 +1,21 @@
 package br.com.mottu.fleet.domain.service;
 
+import br.com.mottu.fleet.application.dto.api.TokenResponse;
+import br.com.mottu.fleet.domain.entity.AuthCode;
 import br.com.mottu.fleet.domain.entity.Funcionario;
 import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.entity.RefreshToken;
 import br.com.mottu.fleet.domain.entity.TokenAcesso;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 import br.com.mottu.fleet.domain.enums.Status;
-import br.com.mottu.fleet.domain.repository.TokenAcessoRepository;
-import br.com.mottu.fleet.application.dto.api.TokenResponse;
-import br.com.mottu.fleet.config.JwtService;
 import br.com.mottu.fleet.domain.exception.BusinessException;
 import br.com.mottu.fleet.domain.exception.ResourceNotFoundException;
-import br.com.mottu.fleet.domain.repository.FuncionarioRepository;
-import br.com.mottu.fleet.domain.repository.RefreshTokenRepository;
-import br.com.mottu.fleet.domain.entity.AuthCode;
 import br.com.mottu.fleet.domain.repository.AuthCodeRepository;
+import br.com.mottu.fleet.domain.repository.FuncionarioRepository;
+import br.com.mottu.fleet.domain.repository.PateoRepository;
+import br.com.mottu.fleet.domain.repository.RefreshTokenRepository;
+import br.com.mottu.fleet.domain.repository.TokenAcessoRepository;
+import br.com.mottu.fleet.config.JwtService;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -30,30 +31,30 @@ import java.util.UUID;
 public class MagicLinkServiceImpl implements MagicLinkService {
 
     private final TokenAcessoRepository tokenAcessoRepository;
-    private final JwtService jwtService;
-    private final String baseUrl;
     private final FuncionarioRepository funcionarioRepository;
-    private final PateoService pateoService;
-    private final AuthCodeRepository authCodeRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
+    private final PateoRepository pateoRepository;
     private final NotificationService notificationService;
+    private final AuthCodeRepository authCodeRepository;
+    private final JwtService jwtService;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final String baseUrl;
 
     public MagicLinkServiceImpl(TokenAcessoRepository tokenAcessoRepository,
-                                JwtService jwtService,
-                                @Value("${application.base-url}") String baseUrl,
                                 FuncionarioRepository funcionarioRepository,
-                                PateoService pateoService,
+                                PateoRepository pateoRepository,
+                                NotificationService notificationService,
                                 AuthCodeRepository authCodeRepository,
+                                JwtService jwtService,
                                 RefreshTokenRepository refreshTokenRepository,
-                                NotificationService notificationService) {
+                                @Value("${application.base-url}") String baseUrl) {
         this.tokenAcessoRepository = tokenAcessoRepository;
-        this.jwtService = jwtService;
-        this.baseUrl = baseUrl;
         this.funcionarioRepository = funcionarioRepository;
-        this.pateoService = pateoService;
-        this.authCodeRepository = authCodeRepository;
-        this.refreshTokenRepository = refreshTokenRepository;
+        this.pateoRepository = pateoRepository;
         this.notificationService = notificationService;
+        this.authCodeRepository = authCodeRepository;
+        this.jwtService = jwtService;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.baseUrl = baseUrl;
     }
 
     /**
@@ -138,9 +139,11 @@ public class MagicLinkServiceImpl implements MagicLinkService {
         }
 
         // REGRA DE NEGÓCIO: Um admin só pode gerar links para funcionários do seu próprio pátio
-        Pateo pateoDoAdmin = pateoService.buscarDetalhesDoPateo(null, adminLogado);
+        Pateo pateoDoAdmin = pateoRepository.findFirstByGerenciadoPorId(adminLogado.getId())
+                .orElseThrow(() -> new BusinessException("Admin não está associado a nenhum pátio."));
+
         if (!pateoDoAdmin.getId().equals(funcionario.getPateo().getId())) {
-            throw new SecurityException("Acesso negado: você não pode gerar links para funcionários de outro pátio.");
+            throw new SecurityException("Acesso negado: este funcionário não pertence ao seu pátio.");
         }
 
         String novoLink = this.gerarLink(funcionario);
