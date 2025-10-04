@@ -16,6 +16,8 @@ import br.com.mottu.fleet.domain.repository.specification.FuncionarioSpecificati
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.UUID;
@@ -58,15 +60,21 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         Funcionario novoFuncionario = new Funcionario();
         novoFuncionario.setNome(request.getNome());
         novoFuncionario.setTelefone(request.getTelefone());
+        novoFuncionario.setEmail(request.getEmail());
         novoFuncionario.setCodigo("FUNC-" + request.getTelefone());        
         novoFuncionario.setPateo(pateo);
         novoFuncionario.setStatus(Status.ATIVO);        
         novoFuncionario.setCargo(Cargo.valueOf(request.getCargo()));
 
         Funcionario funcionarioSalvo = funcionarioRepository.save(novoFuncionario);
-
         String link = magicLinkService.gerarLink(funcionarioSalvo);
-        notificationService.enviarMagicLinkPorWhatsapp(funcionarioSalvo, link);
+
+          TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                notificationService.enviarMagicLinkPorWhatsapp(funcionarioSalvo, link);
+            }
+        });
 
         return funcionarioSalvo;
     }
@@ -110,6 +118,7 @@ public class FuncionarioServiceImpl implements FuncionarioService {
 
         funcionario.setNome(request.getNome());
         funcionario.setTelefone(request.getTelefone());
+        funcionario.setEmail(request.getEmail());
         funcionario.setCargo(Cargo.valueOf(request.getCargo()));
         funcionario.setStatus(Status.valueOf(request.getStatus()));
 
@@ -148,5 +157,27 @@ public class FuncionarioServiceImpl implements FuncionarioService {
             throw new SecurityException("Acesso negado: este funcionário não pertence ao seu pátio.");
         }
         return funcionario;
+    }
+
+
+    /**
+     * Reativa um funcionário que foi previamente desativado (soft-deleted).
+     * Altera o status do funcionário de REMOVIDO para ATIVO.
+     *
+     * @param id O UUID do funcionário a ser reativado.
+     * @param adminLogado O admin de pátio autenticado, para validação de segurança.
+     */
+    @Override
+    @Transactional
+    public void reativar(UUID id, UsuarioAdmin adminLogado) {
+        Pateo pateoDoAdmin = getPateoDoAdmin(adminLogado);
+        Funcionario funcionario = findFuncionarioByIdAndCheckPateo(id, pateoDoAdmin.getId());
+
+        if (funcionario.getStatus() != Status.REMOVIDO) {
+            throw new BusinessException("Este funcionário não está desativado.");
+        }
+
+        funcionario.setStatus(Status.ATIVO);
+        funcionarioRepository.save(funcionario);
     }
 }

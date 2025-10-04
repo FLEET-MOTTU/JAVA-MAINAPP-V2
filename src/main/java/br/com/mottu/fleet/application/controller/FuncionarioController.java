@@ -115,6 +115,23 @@ public class FuncionarioController {
         return ResponseEntity.ok(new MagicLinkResponse(novoLink));
     }
 
+
+    @PostMapping("/{id}/reativar")
+    @Operation(summary = "Reativa um funcionário que foi desativado (soft delete)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Funcionário reativado com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Funcionário não encontrado"),
+            @ApiResponse(responseCode = "403", description = "Funcionário não pertence ao pátio do admin")
+    })
+    public ResponseEntity<Void> reativarFuncionario(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UsuarioAdmin adminLogado) {
+
+        funcionarioService.reativar(id, adminLogado);
+        return ResponseEntity.noContent().build();
+    }
+
+    
     /**
      * Método auxiliar pra converter a entidade Funcionario em uma DTO de resposta.
      */
@@ -122,7 +139,8 @@ public class FuncionarioController {
         return new FuncionarioResponse(
                 funcionario.getId(),
                 funcionario.getNome(),
-                funcionario.getTelefone()
+                funcionario.getTelefone(),
+                funcionario.getEmail()
         );
     }
 }

@@ -3,6 +3,7 @@ package br.com.mottu.fleet.application.dto.api;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Email;
 
 @Schema(description = "DTO para a atualização dos dados de um funcionário existente.")
 public class FuncionarioUpdateRequest {
@@ -16,6 +17,11 @@ public class FuncionarioUpdateRequest {
     @Schema(description = "Telefone do funcionário (apenas números, com DDD)", example = "11987654321")
     private String telefone;
 
+    @NotBlank(message = "O email é obrigatório")
+    @Email(message = "O formato do email é inválido.")
+    @Schema(description = "Email do funcionário", example = "joao.silva.novo@email.com")
+    private String email;
+
     @NotBlank(message = "O cargo é obrigatório")
     @Pattern(regexp = "OPERACIONAL|ADMINISTRATIVO|TEMPORARIO", message = "Cargo inválido. Valores aceitos: OPERACIONAL, ADMINISTRATIVO, TEMPORARIO")
     @Schema(description = "Cargo do funcionário. Valores possíveis: OPERACIONAL, ADMINISTRATIVO, TEMPORARIO", example = "OPERACIONAL")
@@ -28,11 +34,13 @@ public class FuncionarioUpdateRequest {
     
     public String getNome() { return nome; }
     public String getTelefone() { return telefone; }
+    public String getEmail() { return email; }
     public String getCargo() { return cargo; }
     public String getStatus() { return status; }
 
     public void setNome(String nome) { this.nome = nome; }
     public void setTelefone(String telefone) { this.telefone = telefone; }
+    public void setEmail(String email) { this.email = email; }
     public void setCargo(String cargo) { this.cargo = cargo; }
     public void setStatus(String status) { this.status = status; }
 

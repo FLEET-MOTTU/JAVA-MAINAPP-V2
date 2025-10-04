@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -133,6 +134,16 @@ public class GlobalExceptionHandler {
 
         String mensagem = "Erro de validação: " + errors;
         return buildErrorResponse(new RuntimeException(mensagem), HttpStatus.BAD_REQUEST, "Requisição Inválida", request);
+    }
+
+    /**
+     * Handler para erros de integridade do banco de dados, como violações de chaves únicas.
+     * Retorna um status 409 Conflict.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
+        String mensagem = "Erro de integridade dos dados. Provavelmente um registro duplicado (ex: email ou telefone já cadastrado).";
+        return buildErrorResponse(new RuntimeException(mensagem, ex), HttpStatus.CONFLICT, "Conflito de Dados", request);
     }
 
     private ResponseEntity<ErrorResponse> buildErrorResponse(Exception ex, HttpStatus status, String error, HttpServletRequest request) {

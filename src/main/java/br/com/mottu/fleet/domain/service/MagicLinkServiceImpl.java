@@ -5,6 +5,7 @@ import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.entity.RefreshToken;
 import br.com.mottu.fleet.domain.entity.TokenAcesso;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
+import br.com.mottu.fleet.domain.enums.Status;
 import br.com.mottu.fleet.domain.repository.TokenAcessoRepository;
 import br.com.mottu.fleet.application.dto.api.TokenResponse;
 import br.com.mottu.fleet.config.JwtService;
@@ -18,6 +19,8 @@ import br.com.mottu.fleet.domain.repository.AuthCodeRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -33,6 +36,7 @@ public class MagicLinkServiceImpl implements MagicLinkService {
     private final PateoService pateoService;
     private final AuthCodeRepository authCodeRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final NotificationService notificationService;
 
     public MagicLinkServiceImpl(TokenAcessoRepository tokenAcessoRepository,
                                 JwtService jwtService,
@@ -40,7 +44,8 @@ public class MagicLinkServiceImpl implements MagicLinkService {
                                 FuncionarioRepository funcionarioRepository,
                                 PateoService pateoService,
                                 AuthCodeRepository authCodeRepository,
-                                RefreshTokenRepository refreshTokenRepository) {
+                                RefreshTokenRepository refreshTokenRepository,
+                                NotificationService notificationService) {
         this.tokenAcessoRepository = tokenAcessoRepository;
         this.jwtService = jwtService;
         this.baseUrl = baseUrl;
@@ -48,6 +53,7 @@ public class MagicLinkServiceImpl implements MagicLinkService {
         this.pateoService = pateoService;
         this.authCodeRepository = authCodeRepository;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.notificationService = notificationService;
     }
 
     /**
@@ -110,14 +116,15 @@ public class MagicLinkServiceImpl implements MagicLinkService {
 
     
     /**
-     * Regenera um novo Magic Link de primeiro acesso para um funcionário existente.
-     * Um Administrador só pode regenerar o link de funcionários que pertencem ao seu próprio pátio.
+     * Regenera um novo Magic Link para um funcionário existente e dispara uma notificação via WhatsApp.
+     * Este método é acionado por um Administrador de Pátio autenticado.
      *
      * @param funcionarioId O UUID do funcionário que receberá o novo link.
      * @param adminLogado O UsuarioAdmin autenticado que está realizando a operação.
      * @return A URL completa do novo Magic Link gerado.
-     * @throws ResourceNotFoundException se o funcionário com o ID fornecido não for encontrado.
-     * @throws SecurityException se o funcionário não pertencer ao pátio gerenciado pelo admin logado.
+     * @throws ResourceNotFoundException se o funcionário não for encontrado.
+     * @throws BusinessException se o funcionário estiver removido.
+     * @throws SecurityException se o funcionário não pertencer ao pátio do admin logado.
      */
     @Override
     @Transactional
@@ -125,14 +132,28 @@ public class MagicLinkServiceImpl implements MagicLinkService {
         Funcionario funcionario = funcionarioRepository.findById(funcionarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Funcionário não encontrado."));
 
+        // REGRA DE NEGÓCIO: Não é possível gerar um link para um funcionário com status REMOVIDO
+        if (funcionario.getStatus() == Status.REMOVIDO) {
+            throw new BusinessException("Não é possível gerar um link para um funcionário que já foi removido. Reative-o primeiro.");
+        }
+
+        // REGRA DE NEGÓCIO: Um admin só pode gerar links para funcionários do seu próprio pátio
         Pateo pateoDoAdmin = pateoService.buscarDetalhesDoPateo(null, adminLogado);
         if (!pateoDoAdmin.getId().equals(funcionario.getPateo().getId())) {
             throw new SecurityException("Acesso negado: você não pode gerar links para funcionários de outro pátio.");
         }
 
-        return this.gerarLink(funcionario);
-    }
+        String novoLink = this.gerarLink(funcionario);
 
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                notificationService.enviarMagicLinkPorWhatsapp(funcionario, novoLink);
+            }
+        });
+        
+        return novoLink;
+    }
 
     /**
      * Gera um novo Magic Link para um funcionário a partir de seu ID.

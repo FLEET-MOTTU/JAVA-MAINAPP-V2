@@ -17,5 +17,5 @@ public interface FuncionarioService {
     List<Funcionario> listarPorAdminEfiltros(UsuarioAdmin adminLogado, Status status, Cargo cargo);
     Funcionario atualizar(UUID id, FuncionarioUpdateRequest request, UsuarioAdmin adminLogado);
     void desativar(UUID id, UsuarioAdmin adminLogado);
-
+    void reativar(UUID id, UsuarioAdmin adminLogado);
 }

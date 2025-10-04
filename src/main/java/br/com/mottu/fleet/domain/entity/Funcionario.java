@@ -30,6 +30,9 @@ public class Funcionario implements UserDetails {
     @Column(nullable = false)
     private String telefone;
 
+    @Column(nullable = false, unique = true)
+    private String email;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Cargo cargo;
@@ -87,6 +90,7 @@ public class Funcionario implements UserDetails {
     public String getCodigo() { return codigo; }
     public String getNome() { return nome; }
     public String getTelefone() { return telefone; }
+    public String getEmail() { return email; }
     public Cargo getCargo() { return cargo; }
     public Status getStatus() { return status; }
     public String getFotoUrl() { return fotoUrl; }
@@ -98,6 +102,7 @@ public class Funcionario implements UserDetails {
     public void setCodigo(String codigo) { this.codigo = codigo; }
     public void setNome(String nome) { this.nome = nome; }
     public void setTelefone(String telefone) { this.telefone = telefone; }
+    public void setEmail(String email) { this.email = email; }
     public void setCargo(Cargo cargo) { this.cargo = cargo; }
     public void setStatus(Status status) { this.status = status; }
     public void setFotoUrl(String fotoUrl) { this.fotoUrl = fotoUrl; }
