@@ -37,6 +37,7 @@ services:
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
       TWILIO_WHATSAPP_NUMBER: ${TWILIO_WHATSAPP_NUMBER}
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING}
     ports:
       - "8080:8080"
     volumes:
@@ -44,6 +45,8 @@ services:
     depends_on:
       fleet-db-mysql:
         condition: service_healthy
+      azurite:
+        condition: service_started
     develop:
       watch:
         - action: sync
@@ -55,6 +58,15 @@ services:
         - action: rebuild
           path: pom.xml
 
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: fleet-azurite
+    ports:
+      - "10000:10000"
+    volumes:
+      - azurite-data:/data
+
 volumes:
   fleet-db-data:
   uploads-data:
+  azurite-data:
