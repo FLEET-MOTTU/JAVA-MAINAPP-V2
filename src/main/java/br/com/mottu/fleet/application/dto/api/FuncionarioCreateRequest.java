@@ -28,14 +28,19 @@ public class FuncionarioCreateRequest {
     @Schema(description = "Cargo do funcionário. Valores possíveis: OPERACIONAL, ADMINISTRATIVO, TEMPORARIO", example = "OPERACIONAL")
     private String cargo;
 
+    @Schema(description = "URL para a foto do funcionário (opcional)", example = "https://example.com/foto.png")
+    private String fotoUrl;
+
     public String getNome() { return nome; }
     public String getTelefone() { return telefone; }
     public String getEmail() { return email; }
     public String getCargo() { return cargo; }
+    public String getFotoUrl() { return fotoUrl; }
 
     public void setNome(String nome) { this.nome = nome; }
     public void setTelefone(String telefone) { this.telefone = telefone; }
     public void setEmail(String email) { this.email = email; }
     public void setCargo(String cargo) { this.cargo = cargo; }
+    public void setFotoUrl(String fotoUrl) { this.fotoUrl = fotoUrl; }
 
 }

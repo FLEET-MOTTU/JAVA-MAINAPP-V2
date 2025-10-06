@@ -31,17 +31,22 @@ public class FuncionarioUpdateRequest {
     @Pattern(regexp = "ATIVO|SUSPENSO", message = "Status inválido. Para remover, use o endpoint DELETE. Valores aceitos: ATIVO, SUSPENSO")
     @Schema(description = "Status do funcionário. Valores possíveis: ATIVO, SUSPENSO", example = "ATIVO")
     private String status;
+
+    @Schema(description = "URL para a foto do funcionário (opcional)", example = "https://example.com/nova-foto.png")
+    private String fotoUrl;
     
     public String getNome() { return nome; }
     public String getTelefone() { return telefone; }
     public String getEmail() { return email; }
     public String getCargo() { return cargo; }
     public String getStatus() { return status; }
+    public String getFotoUrl() { return fotoUrl; }
 
     public void setNome(String nome) { this.nome = nome; }
     public void setTelefone(String telefone) { this.telefone = telefone; }
     public void setEmail(String email) { this.email = email; }
     public void setCargo(String cargo) { this.cargo = cargo; }
     public void setStatus(String status) { this.status = status; }
+    public void setFotoUrl(String fotoUrl) { this.fotoUrl = fotoUrl; }
 
 }

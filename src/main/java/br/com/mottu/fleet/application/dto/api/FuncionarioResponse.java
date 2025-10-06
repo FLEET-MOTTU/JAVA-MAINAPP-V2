@@ -15,5 +15,8 @@ public record FuncionarioResponse(
     String telefone,
 
     @Schema(description = "Email do funcionário", example = "email@funcionario.com")
-    String email
+    String email,
+
+    @Schema(description = "URL da foto do funcionário")
+    String fotoUrl
 ) {}

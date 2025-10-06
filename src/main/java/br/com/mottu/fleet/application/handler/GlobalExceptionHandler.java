@@ -7,6 +7,7 @@ import br.com.mottu.fleet.domain.exception.InvalidTokenException;
 import br.com.mottu.fleet.domain.exception.ResourceNotFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -144,6 +145,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
         String mensagem = "Erro de integridade dos dados. Provavelmente um registro duplicado (ex: email ou telefone já cadastrado).";
         return buildErrorResponse(new RuntimeException(mensagem, ex), HttpStatus.CONFLICT, "Conflito de Dados", request);
+    }
+
+    /**
+     * Handler para exceções de validação lançadas manualmente (ex: @RequestPart com JSON).
+     * Formata os erros e retorna um status 400 Bad Request.
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
+        String errors = ex.getConstraintViolations().stream()
+                .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
+                .collect(Collectors.joining(", "));
+
+        String mensagem = "Erro de validação: " + errors;
+        return buildErrorResponse(new RuntimeException(mensagem, ex), HttpStatus.BAD_REQUEST, "Requisição Inválida", request);
     }
 
     private ResponseEntity<ErrorResponse> buildErrorResponse(Exception ex, HttpStatus status, String error, HttpServletRequest request) {
