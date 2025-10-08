@@ -22,7 +22,7 @@
 
 ### 1. Sobre o Projeto
 
-O **F.L.E.E.T.** (Fleet Localization and Efficient Tracking) é a solução de backend desenvolvida em Java para o desafio do **Challenge FIAP 2025 - Mottu**. O sistema visa modernizar o processo de gerenciamento de motocicletas no pátio, substituindo o controle manual por um sistema de tracking automatizado, em tempo real e de alta visibilidade.
+O **F.L.E.E.T.** (Fleet Localization and Efficient Tracking) é a solução de backend desenvolvida em Java para a empresa Mottu. O sistema visa modernizar o processo de gerenciamento de motocicletas no pátio, substituindo o controle manual por um sistema de tracking automatizado, em tempo real e de alta visibilidade.
 
 ---
 
@@ -158,6 +158,3 @@ O schema do banco de dados é gerenciado pelo **Flyway**. Todos os scripts de cr
 O Flyway executa as migrações automaticamente na inicialização da aplicação, garantindo que o banco de dados esteja sempre na versão correta.
 
 ---
-
-### 9. Vídeo Demonstrativo
-Link: https://youtu.be/TONDgj57ysE
