@@ -16,9 +16,13 @@ import br.com.mottu.fleet.domain.repository.specification.FuncionarioSpecificati
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
+import java.io.IOException;
 
 /**
  * Implementação do serviço que contém as regras de negócio para
@@ -31,15 +35,18 @@ public class FuncionarioServiceImpl implements FuncionarioService {
     private final PateoRepository pateoRepository;
     private final MagicLinkService magicLinkService;
     private final NotificationService notificationService;
+    private final StorageService storageService;
 
     public FuncionarioServiceImpl(FuncionarioRepository funcionarioRepository,
                                   PateoRepository pateoRepository,
                                   MagicLinkService magicLinkService,
-                                  NotificationService notificationService) {
+                                  NotificationService notificationService,
+                                  StorageService storageService) {
         this.funcionarioRepository = funcionarioRepository;
         this.pateoRepository = pateoRepository;
         this.magicLinkService = magicLinkService;
         this.notificationService = notificationService;
+        this.storageService = storageService;
     }
 
 
@@ -52,21 +59,33 @@ public class FuncionarioServiceImpl implements FuncionarioService {
      */
     @Override
     @Transactional
-    public Funcionario criar(FuncionarioCreateRequest request, UsuarioAdmin adminLogado) {
+    public Funcionario criar(FuncionarioCreateRequest request, MultipartFile foto, UsuarioAdmin adminLogado) throws IOException {
         Pateo pateo = getPateoDoAdmin(adminLogado);
+
+        String fotoUrl = null;
+        if (foto != null && !foto.isEmpty()) {
+            fotoUrl = storageService.upload("fotos", foto);
+        }
 
         Funcionario novoFuncionario = new Funcionario();
         novoFuncionario.setNome(request.getNome());
         novoFuncionario.setTelefone(request.getTelefone());
-        novoFuncionario.setCodigo("FUNC-" + request.getTelefone());        
+        novoFuncionario.setEmail(request.getEmail());
+        novoFuncionario.setFotoUrl(fotoUrl);
         novoFuncionario.setPateo(pateo);
-        novoFuncionario.setStatus(Status.ATIVO);        
         novoFuncionario.setCargo(Cargo.valueOf(request.getCargo()));
+        novoFuncionario.setStatus(Status.ATIVO);
+        novoFuncionario.setCodigo("FUNC-" + request.getTelefone());
 
         Funcionario funcionarioSalvo = funcionarioRepository.save(novoFuncionario);
-
         String link = magicLinkService.gerarLink(funcionarioSalvo);
-        notificationService.enviarMagicLinkPorWhatsapp(funcionarioSalvo, link);
+
+          TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                notificationService.enviarMagicLinkPorWhatsapp(funcionarioSalvo, link);
+            }
+        });
 
         return funcionarioSalvo;
     }
@@ -90,13 +109,12 @@ public class FuncionarioServiceImpl implements FuncionarioService {
 
 
     /**
-     * Atualiza os dados de um funcionário existente.
+     * Atualiza os dados textuais de um funcionário existente (nome, email, cargo, etc.).
+     * Este método NÃO lida com o upload de arquivos de foto.
      * @param id O UUID do funcionário a ser atualizado.
      * @param request DTO com os novos dados.
      * @param adminLogado O admin de pátio autenticado, para validação de segurança.
      * @return A entidade Funcionario atualizada.
-     * @throws SecurityException se o funcionário não pertencer ao pátio do admin.
-     * @throws BusinessException se o funcionário já estiver removido.
      */
     @Override
     @Transactional
@@ -110,9 +128,38 @@ public class FuncionarioServiceImpl implements FuncionarioService {
 
         funcionario.setNome(request.getNome());
         funcionario.setTelefone(request.getTelefone());
+        funcionario.setEmail(request.getEmail());
+        funcionario.setFotoUrl(request.getFotoUrl());
         funcionario.setCargo(Cargo.valueOf(request.getCargo()));
         funcionario.setStatus(Status.valueOf(request.getStatus()));
 
+        return funcionarioRepository.save(funcionario);
+    }    
+
+
+    /**
+     * Atualiza a foto de um funcionário. Faz o upload do novo arquivo para o
+     * storage e salva a URL resultante na entidade do funcionário.
+     *
+     * @param id O UUID do funcionário a ser atualizado.
+     * @param foto O arquivo de imagem (MultipartFile) enviado.
+     * @param adminLogado O admin de pátio autenticado, para validação de segurança.
+     * @return A entidade Funcionario atualizada com a nova fotoUrl.
+     * @throws IOException Se houver um erro no processamento do arquivo.
+     */
+    @Override
+    @Transactional
+    public Funcionario atualizarFoto(UUID id, MultipartFile foto, UsuarioAdmin adminLogado) throws IOException {
+        Pateo pateoDoAdmin = getPateoDoAdmin(adminLogado);
+        Funcionario funcionario = findFuncionarioByIdAndCheckPateo(id, pateoDoAdmin.getId());
+
+        if (foto == null || foto.isEmpty()) {
+            throw new BusinessException("O arquivo da foto não pode ser vazio.");
+        }
+
+        String fotoUrl = storageService.upload("fotos", foto);
+
+        funcionario.setFotoUrl(fotoUrl);
         return funcionarioRepository.save(funcionario);
     }
 
@@ -129,6 +176,27 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         Funcionario funcionario = findFuncionarioByIdAndCheckPateo(id, pateoDoAdmin.getId());
 
         funcionario.setStatus(Status.REMOVIDO);
+        funcionarioRepository.save(funcionario);
+    }
+
+    /**
+     * Reativa um funcionário que foi previamente desativado (soft-deleted).
+     * Altera o status do funcionário de REMOVIDO para ATIVO.
+     *
+     * @param id O UUID do funcionário a ser reativado.
+     * @param adminLogado O admin de pátio autenticado, para validação de segurança.
+     */
+    @Override
+    @Transactional
+    public void reativar(UUID id, UsuarioAdmin adminLogado) {
+        Pateo pateoDoAdmin = getPateoDoAdmin(adminLogado);
+        Funcionario funcionario = findFuncionarioByIdAndCheckPateo(id, pateoDoAdmin.getId());
+
+        if (funcionario.getStatus() != Status.REMOVIDO) {
+            throw new BusinessException("Este funcionário não está desativado.");
+        }
+
+        funcionario.setStatus(Status.ATIVO);
         funcionarioRepository.save(funcionario);
     }
 
@@ -149,4 +217,5 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         }
         return funcionario;
     }
+
 }

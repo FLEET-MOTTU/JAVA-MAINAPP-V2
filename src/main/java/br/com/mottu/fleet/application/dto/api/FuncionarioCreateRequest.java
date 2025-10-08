@@ -3,6 +3,8 @@ package br.com.mottu.fleet.application.dto.api;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Email;
+
 
 @Schema(description = "DTO para a criação de um novo funcionário por um Administrador de Pátio.")
 public class FuncionarioCreateRequest {
@@ -16,17 +18,29 @@ public class FuncionarioCreateRequest {
     @Schema(description = "Telefone do funcionário (apenas números, com DDD)", example = "11987654321")
     private String telefone;
 
+    @NotBlank(message = "O email é obrigatório")
+    @Email(message = "O formato do email é inválido.")
+    @Schema(description = "Email do funcionário", example = "joao.silva@email.com")
+    private String email;
+
     @NotBlank(message = "O cargo é obrigatório")
     @Pattern(regexp = "OPERACIONAL|ADMINISTRATIVO|TEMPORARIO", message = "Cargo inválido. Valores aceitos: OPERACIONAL, ADMINISTRATIVO, TEMPORARIO")
     @Schema(description = "Cargo do funcionário. Valores possíveis: OPERACIONAL, ADMINISTRATIVO, TEMPORARIO", example = "OPERACIONAL")
     private String cargo;
 
+    @Schema(description = "URL para a foto do funcionário (opcional)", example = "https://example.com/foto.png")
+    private String fotoUrl;
+
     public String getNome() { return nome; }
     public String getTelefone() { return telefone; }
+    public String getEmail() { return email; }
     public String getCargo() { return cargo; }
+    public String getFotoUrl() { return fotoUrl; }
 
     public void setNome(String nome) { this.nome = nome; }
     public void setTelefone(String telefone) { this.telefone = telefone; }
+    public void setEmail(String email) { this.email = email; }
     public void setCargo(String cargo) { this.cargo = cargo; }
+    public void setFotoUrl(String fotoUrl) { this.fotoUrl = fotoUrl; }
 
 }

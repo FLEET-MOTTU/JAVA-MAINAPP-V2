@@ -1,23 +1,27 @@
 package br.com.mottu.fleet.domain.service;
 
+import br.com.mottu.fleet.application.dto.api.TokenResponse;
+import br.com.mottu.fleet.domain.entity.AuthCode;
 import br.com.mottu.fleet.domain.entity.Funcionario;
 import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.entity.RefreshToken;
 import br.com.mottu.fleet.domain.entity.TokenAcesso;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
-import br.com.mottu.fleet.domain.repository.TokenAcessoRepository;
-import br.com.mottu.fleet.application.dto.api.TokenResponse;
-import br.com.mottu.fleet.config.JwtService;
+import br.com.mottu.fleet.domain.enums.Status;
 import br.com.mottu.fleet.domain.exception.BusinessException;
 import br.com.mottu.fleet.domain.exception.ResourceNotFoundException;
-import br.com.mottu.fleet.domain.repository.FuncionarioRepository;
-import br.com.mottu.fleet.domain.repository.RefreshTokenRepository;
-import br.com.mottu.fleet.domain.entity.AuthCode;
 import br.com.mottu.fleet.domain.repository.AuthCodeRepository;
+import br.com.mottu.fleet.domain.repository.FuncionarioRepository;
+import br.com.mottu.fleet.domain.repository.PateoRepository;
+import br.com.mottu.fleet.domain.repository.RefreshTokenRepository;
+import br.com.mottu.fleet.domain.repository.TokenAcessoRepository;
+import br.com.mottu.fleet.config.JwtService;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -27,27 +31,30 @@ import java.util.UUID;
 public class MagicLinkServiceImpl implements MagicLinkService {
 
     private final TokenAcessoRepository tokenAcessoRepository;
-    private final JwtService jwtService;
-    private final String baseUrl;
     private final FuncionarioRepository funcionarioRepository;
-    private final PateoService pateoService;
+    private final PateoRepository pateoRepository;
+    private final NotificationService notificationService;
     private final AuthCodeRepository authCodeRepository;
+    private final JwtService jwtService;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final String baseUrl;
 
     public MagicLinkServiceImpl(TokenAcessoRepository tokenAcessoRepository,
-                                JwtService jwtService,
-                                @Value("${application.base-url}") String baseUrl,
                                 FuncionarioRepository funcionarioRepository,
-                                PateoService pateoService,
+                                PateoRepository pateoRepository,
+                                NotificationService notificationService,
                                 AuthCodeRepository authCodeRepository,
-                                RefreshTokenRepository refreshTokenRepository) {
+                                JwtService jwtService,
+                                RefreshTokenRepository refreshTokenRepository,
+                                @Value("${application.base-url}") String baseUrl) {
         this.tokenAcessoRepository = tokenAcessoRepository;
-        this.jwtService = jwtService;
-        this.baseUrl = baseUrl;
         this.funcionarioRepository = funcionarioRepository;
-        this.pateoService = pateoService;
+        this.pateoRepository = pateoRepository;
+        this.notificationService = notificationService;
         this.authCodeRepository = authCodeRepository;
+        this.jwtService = jwtService;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.baseUrl = baseUrl;
     }
 
     /**
@@ -110,14 +117,15 @@ public class MagicLinkServiceImpl implements MagicLinkService {
 
     
     /**
-     * Regenera um novo Magic Link de primeiro acesso para um funcionário existente.
-     * Um Administrador só pode regenerar o link de funcionários que pertencem ao seu próprio pátio.
+     * Regenera um novo Magic Link para um funcionário existente e dispara uma notificação via WhatsApp.
+     * Este método é acionado por um Administrador de Pátio autenticado.
      *
      * @param funcionarioId O UUID do funcionário que receberá o novo link.
      * @param adminLogado O UsuarioAdmin autenticado que está realizando a operação.
      * @return A URL completa do novo Magic Link gerado.
-     * @throws ResourceNotFoundException se o funcionário com o ID fornecido não for encontrado.
-     * @throws SecurityException se o funcionário não pertencer ao pátio gerenciado pelo admin logado.
+     * @throws ResourceNotFoundException se o funcionário não for encontrado.
+     * @throws BusinessException se o funcionário estiver removido.
+     * @throws SecurityException se o funcionário não pertencer ao pátio do admin logado.
      */
     @Override
     @Transactional
@@ -125,14 +133,30 @@ public class MagicLinkServiceImpl implements MagicLinkService {
         Funcionario funcionario = funcionarioRepository.findById(funcionarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Funcionário não encontrado."));
 
-        Pateo pateoDoAdmin = pateoService.buscarDetalhesDoPateo(null, adminLogado);
-        if (!pateoDoAdmin.getId().equals(funcionario.getPateo().getId())) {
-            throw new SecurityException("Acesso negado: você não pode gerar links para funcionários de outro pátio.");
+        // REGRA DE NEGÓCIO: Não é possível gerar um link para um funcionário com status REMOVIDO
+        if (funcionario.getStatus() == Status.REMOVIDO) {
+            throw new BusinessException("Não é possível gerar um link para um funcionário que já foi removido. Reative-o primeiro.");
         }
 
-        return this.gerarLink(funcionario);
-    }
+        // REGRA DE NEGÓCIO: Um admin só pode gerar links para funcionários do seu próprio pátio
+        Pateo pateoDoAdmin = pateoRepository.findFirstByGerenciadoPorId(adminLogado.getId())
+                .orElseThrow(() -> new BusinessException("Admin não está associado a nenhum pátio."));
 
+        if (!pateoDoAdmin.getId().equals(funcionario.getPateo().getId())) {
+            throw new SecurityException("Acesso negado: este funcionário não pertence ao seu pátio.");
+        }
+
+        String novoLink = this.gerarLink(funcionario);
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                notificationService.enviarMagicLinkPorWhatsapp(funcionario, novoLink);
+            }
+        });
+        
+        return novoLink;
+    }
 
     /**
      * Gera um novo Magic Link para um funcionário a partir de seu ID.

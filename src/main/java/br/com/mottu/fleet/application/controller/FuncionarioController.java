@@ -16,18 +16,28 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Valid;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Validator;
+import java.util.Set;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.springframework.http.MediaType;
 
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/funcionarios")
@@ -38,23 +48,35 @@ public class FuncionarioController {
 
     private final FuncionarioService funcionarioService;
     private final MagicLinkService magicLinkService;
+    private final Validator validator;
+    private final ObjectMapper objectMapper;
 
-    public FuncionarioController(FuncionarioService funcionarioService, MagicLinkService magicLinkService) {
+    public FuncionarioController(FuncionarioService funcionarioService,
+                                 MagicLinkService magicLinkService,
+                                 Validator validator,
+                                 ObjectMapper objectMapper) {
         this.funcionarioService = funcionarioService;
         this.magicLinkService = magicLinkService;
+        this.validator = validator;
+        this.objectMapper = objectMapper;
     }
 
-    @PostMapping
-    @Operation(summary = "Cadastra um novo funcionário e dispara o envio do Magic Link por WhatsApp")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Funcionário criado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Dados da requisição inválidos")
-    })
-    public ResponseEntity<FuncionarioResponse> criarFuncionario(
-            @Valid @RequestBody FuncionarioCreateRequest request,
-            @AuthenticationPrincipal UsuarioAdmin adminLogado) {
 
-        Funcionario funcionarioCriado = funcionarioService.criar(request, adminLogado);
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Cadastra um novo funcionário com foto opcional")
+    public ResponseEntity<FuncionarioResponse> criarFuncionario(
+            @Valid @RequestPart("dados") @Schema(implementation = FuncionarioCreateRequest.class) String dadosJson,
+            @RequestPart(value = "foto", required = false) MultipartFile foto,
+            @AuthenticationPrincipal UsuarioAdmin adminLogado) throws IOException {
+
+        FuncionarioCreateRequest request = objectMapper.readValue(dadosJson, FuncionarioCreateRequest.class);
+
+        Set<ConstraintViolation<FuncionarioCreateRequest>> violations = validator.validate(request);
+        if (!violations.isEmpty()) {
+            throw new ConstraintViolationException(violations);
+        }
+
+        Funcionario funcionarioCriado = funcionarioService.criar(request, foto, adminLogado);
         FuncionarioResponse response = toFuncionarioResponse(funcionarioCriado);
 
         URI location = ServletUriComponentsBuilder
@@ -115,6 +137,47 @@ public class FuncionarioController {
         return ResponseEntity.ok(new MagicLinkResponse(novoLink));
     }
 
+
+    @PostMapping("/{id}/reativar")
+    @Operation(summary = "Reativa um funcionário que foi desativado (soft delete)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Funcionário reativado com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Funcionário não encontrado"),
+            @ApiResponse(responseCode = "403", description = "Funcionário não pertence ao pátio do admin")
+    })
+    public ResponseEntity<Void> reativarFuncionario(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UsuarioAdmin adminLogado) {
+
+        funcionarioService.reativar(id, adminLogado);
+        return ResponseEntity.noContent().build();
+    }
+
+
+    /**
+     * Endpoint para fazer a substituição da foto de um funcionário.
+     * @param id O UUID do funcionário.
+     * @param foto O arquivo da imagem enviado como multipart/form-data.
+     * @param adminLogado O admin autenticado.
+     * @return Os dados atualizados do funcionário, incluindo a nova URL da foto.
+     */
+    @PostMapping(value = "/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Faz o upload ou atualiza a foto de um funcionário")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Foto atualizada com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Funcionário não encontrado")
+    })
+    public ResponseEntity<FuncionarioResponse> uploadFoto(
+            @PathVariable UUID id,
+            @RequestPart("foto") MultipartFile foto,
+            @AuthenticationPrincipal UsuarioAdmin adminLogado) throws IOException {
+
+        // Reutilizamos o mesmo método de serviço que criamos antes!
+        Funcionario funcionarioAtualizado = funcionarioService.atualizarFoto(id, foto, adminLogado);
+        return ResponseEntity.ok(toFuncionarioResponse(funcionarioAtualizado));
+    }
+
+    
     /**
      * Método auxiliar pra converter a entidade Funcionario em uma DTO de resposta.
      */
@@ -122,7 +185,9 @@ public class FuncionarioController {
         return new FuncionarioResponse(
                 funcionario.getId(),
                 funcionario.getNome(),
-                funcionario.getTelefone()
+                funcionario.getTelefone(),
+                funcionario.getEmail(),
+                funcionario.getFotoUrl()
         );
     }
 }
