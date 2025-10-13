@@ -83,7 +83,7 @@ public class FuncionarioServiceImpl implements FuncionarioService {
           TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                notificationService.enviarMagicLinkPorWhatsapp(funcionarioSalvo, link);
+                notificationService.enviarMagicLink(funcionarioSalvo, link);
             }
         });
 

@@ -33,7 +33,7 @@ public class TwilioWhatsAppNotificationServiceImpl implements NotificationServic
      * @param magicLinkUrl A URL completa do Magic Link a ser enviada.
      */
     @Override
-    public void enviarMagicLinkPorWhatsapp(Funcionario funcionario, String magicLinkUrl) {
+    public void enviarMagicLink(Funcionario funcionario, String magicLinkUrl) {
         String numeroDestino = formatarParaE14(funcionario.getTelefone());
 
         String corpoMensagem = String.format(

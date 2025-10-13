@@ -151,7 +151,7 @@ public class MagicLinkServiceImpl implements MagicLinkService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                notificationService.enviarMagicLinkPorWhatsapp(funcionario, novoLink);
+                notificationService.enviarMagicLink(funcionario, novoLink);
             }
         });
         

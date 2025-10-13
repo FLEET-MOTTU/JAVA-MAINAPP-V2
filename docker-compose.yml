@@ -24,8 +24,8 @@ services:
     build: .
     container_name: fleet-app-java
     environment:
-      DB_HOST: fleet-db-mysql
-      DB_PORT: 3306
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -38,6 +38,8 @@ services:
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
       TWILIO_WHATSAPP_NUMBER: ${TWILIO_WHATSAPP_NUMBER}
       AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}    
     ports:
       - "8080:8080"
     volumes:
