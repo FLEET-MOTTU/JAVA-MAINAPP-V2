@@ -28,6 +28,9 @@ public class TokenAcesso {
 
     @Column(nullable = false)
     private boolean usado;
+
+    @Column(name = "twilio_message_sid", unique = true)
+    private String twilioMessageSid;
     
     public TokenAcesso() {}
 
@@ -37,6 +40,7 @@ public class TokenAcesso {
     public Instant getCriadoEm() { return criadoEm; }
     public Instant getExpiraEm() { return expiraEm; }
     public boolean isUsado() { return usado; }
+    public String getTwilioMessageSid() { return twilioMessageSid; }
 
     public void setId(UUID id) { this.id = id; }
     public void setToken(String token) { this.token = token; }
@@ -44,5 +48,6 @@ public class TokenAcesso {
     public void setCriadoEm(Instant criadoEm) { this.criadoEm = criadoEm; }
     public void setExpiraEm(Instant expiraEm) { this.expiraEm = expiraEm; }
     public void setUsado(boolean usado) { this.usado = usado; }
+    public void setTwilioMessageSid(String twilioMessageSid) { this.twilioMessageSid = twilioMessageSid; }
 
 }

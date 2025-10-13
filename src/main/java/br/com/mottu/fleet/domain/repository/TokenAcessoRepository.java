@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface TokenAcessoRepository extends JpaRepository<TokenAcesso, UUID> {
     Optional<TokenAcesso> findByToken(String token);
     Optional<TokenAcesso> findFirstByFuncionarioAndUsadoIsFalseAndExpiraEmAfterOrderByCriadoEmDesc(Funcionario funcionario, Instant agora);
+    Optional<TokenAcesso> findByTwilioMessageSid(String twilioMessageSid);
 }
