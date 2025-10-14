@@ -7,12 +7,12 @@ import br.com.mottu.fleet.domain.repository.TokenAcessoRepository;
 import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.type.PhoneNumber;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementação do NotificationService que utiliza a API do Twilio para enviar mensagens via WhatsApp.
@@ -24,13 +24,17 @@ import org.springframework.stereotype.Service;
 public class TwilioWhatsAppNotificationServiceImpl implements NotificationService {
 
     private static final Logger log = LoggerFactory.getLogger(TwilioWhatsAppNotificationServiceImpl.class);
+    
     private final String twilioWhatsappNumber;
     private final TokenAcessoRepository tokenAcessoRepository;
+    private final TokenUpdateService tokenUpdateService;
 
     public TwilioWhatsAppNotificationServiceImpl(@Value("${twilio.whatsapp-number}") String twilioWhatsappNumber,
-                                                TokenAcessoRepository tokenAcessoRepository) {
+                                                 TokenAcessoRepository tokenAcessoRepository,
+                                                 TokenUpdateService tokenUpdateService) { // ADICIONE NO CONSTRUTOR
         this.twilioWhatsappNumber = twilioWhatsappNumber;
         this.tokenAcessoRepository = tokenAcessoRepository;
+        this.tokenUpdateService = tokenUpdateService; // INICIALIZE
     }
 
 
@@ -43,12 +47,10 @@ public class TwilioWhatsAppNotificationServiceImpl implements NotificationServic
     @Override
     public void enviarMagicLink(Funcionario funcionario, String magicLinkUrl) {
         try {
-            // Extrair o token UUID da URL para encontrar o registro no banco
             String tokenUuid = extrairTokenDaUrl(magicLinkUrl);
             TokenAcesso tokenAcesso = tokenAcessoRepository.findByToken(tokenUuid)
                     .orElseThrow(() -> new IllegalStateException("TokenAcesso não encontrado para a URL do Magic Link: " + magicLinkUrl));
 
-            // Formatar e preparar a mensagem
             String numeroDestino = formatarParaE164(funcionario.getTelefone());
             String corpoMensagem = String.format(
                 "Olá %s, bem-vindo ao F.L.E.E.T.! Para seu primeiro acesso, use o link a seguir. Ele é válido por 24 horas: %s",
@@ -59,14 +61,13 @@ public class TwilioWhatsAppNotificationServiceImpl implements NotificationServic
             PhoneNumber to = new PhoneNumber("whatsapp:" + numeroDestino);
             PhoneNumber from = new PhoneNumber(this.twilioWhatsappNumber);
 
-            // Enviar a mensagem e capturar o resultado
+            // VOLTAMOS A CHAMADA SIMPLES, SEM 'setStatusCallback'
             Message message = Message.creator(to, from, corpoMensagem).create();
             
-            // Salvar o MessageSID no registro do TokenAcesso
             String messageSid = message.getSid();
-            tokenAcesso.setTwilioMessageSid(messageSid);
-            tokenAcessoRepository.save(tokenAcesso);
 
+            tokenUpdateService.atualizarMessageSid(tokenAcesso.getId(), messageSid);
+            
             log.info("Magic Link enviado via WhatsApp para {}. MessageSID: {}", funcionario.getNome(), messageSid);
 
         } catch (Exception e) {
@@ -82,7 +83,7 @@ public class TwilioWhatsAppNotificationServiceImpl implements NotificationServic
      */
     private String extrairTokenDaUrl(String magicLinkUrl) {
         return magicLinkUrl.substring(magicLinkUrl.lastIndexOf("=") + 1);
-    }    
+    }   
 
 
     /**

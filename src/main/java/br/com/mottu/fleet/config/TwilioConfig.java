@@ -1,10 +1,12 @@
 package br.com.mottu.fleet.config;
 
+import com.sendgrid.SendGrid;
 import com.twilio.Twilio;
 
 import jakarta.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 
@@ -16,6 +18,7 @@ public class TwilioConfig {
 
     private final String accountSid;
     private final String authToken;
+    private final String sendGridApiKey;
 
     /**
      * Construtor que injeta todas as credenciais necessárias dos serviços Twilio.
@@ -24,9 +27,11 @@ public class TwilioConfig {
      * @param sendGridApiKey A chave da API do serviço SendGrid.
      */
     public TwilioConfig(@Value("${twilio.account-sid}") String accountSid,
-                        @Value("${twilio.auth-token}") String authToken) {
+                          @Value("${twilio.auth-token}") String authToken,
+                          @Value("${sendgrid.api.key}") String sendGridApiKey) {
         this.accountSid = accountSid;
         this.authToken = authToken;
+        this.sendGridApiKey = sendGridApiKey;
     }
 
     /**
@@ -37,4 +42,15 @@ public class TwilioConfig {
     public void initTwilio() {
         Twilio.init(this.accountSid, this.authToken);
     }
+
+
+    /**
+     * Cria e expõe o bean do cliente SendGrid.
+     * @return Uma instância do cliente SendGrid configurada.
+     */
+    @Bean
+    public SendGrid sendGridClient() {
+        return new SendGrid(this.sendGridApiKey);
+    }
+
 }

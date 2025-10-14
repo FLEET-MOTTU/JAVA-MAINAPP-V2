@@ -1,82 +1,76 @@
 package br.com.mottu.fleet.domain.service;
 
 import br.com.mottu.fleet.domain.entity.Funcionario;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import com.sendgrid.Method;
+import com.sendgrid.Request;
+import com.sendgrid.Response;
+import com.sendgrid.SendGrid;
+import com.sendgrid.helpers.mail.Mail;
+import com.sendgrid.helpers.mail.objects.Content;
+import com.sendgrid.helpers.mail.objects.Email;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+
+/**
+ * Implementação do NotificationService que utiliza a API do SendGrid para enviar e-mails.
+ * Esta classe não é a primária (@Primary), sendo destinada para uso como fallback.
+ */
 @Service
 public class SendGridEmailNotificationServiceImpl implements NotificationService {
 
     private static final Logger log = LoggerFactory.getLogger(SendGridEmailNotificationServiceImpl.class);
-
-    private final String sendGridApiKey;
+    private final SendGrid sendGridClient;
     private final String fromEmail;
-    private final HttpClient httpClient;
-    private final ObjectMapper objectMapper;
 
-    public SendGridEmailNotificationServiceImpl(@Value("${sendgrid.api.key}") String sendGridApiKey,
-                                            @Value("${mail.from.address}") String fromEmail,
-                                            ObjectMapper objectMapper) {
-        this.sendGridApiKey = sendGridApiKey;
+    public SendGridEmailNotificationServiceImpl(SendGrid sendGridClient,
+                                                @Value("${mail.from.address}") String fromEmail) {
+        this.sendGridClient = sendGridClient;
         this.fromEmail = fromEmail;
-        this.httpClient = HttpClient.newHttpClient();
-        this.objectMapper = objectMapper;
     }
 
+    /**
+     * Implementação do envio de Magic Link via E-mail usando o SendGrid.
+     * Constrói e envia um e-mail contendo a URL de acesso para o funcionário.
+     */
     @Override
     public void enviarMagicLink(Funcionario funcionario, String magicLinkUrl) {
-        log.info("Tentando enviar e-mail de fallback via HttpClient nativo para: {}", funcionario.getEmail());
-        
-        try {
-            String requestBody = objectMapper.writeValueAsString(new SendGridMail(
-                new EmailAddress(this.fromEmail),
-                "Seu Link de Acesso - F.L.E.E.T. Mottu",
-                new Personalization[]{ new Personalization(new EmailAddress[]{ new EmailAddress(funcionario.getEmail()) })},
-                new Content[]{ new Content("text/plain", formatarCorpoEmail(funcionario, magicLinkUrl)) }
-            ));
+        log.info("Tentando enviar e-mail de fallback via SendGrid para: {}", funcionario.getEmail());
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.sendgrid.com/v3/mail/send"))
-                    .header("Authorization", "Bearer " + this.sendGridApiKey)
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                log.info("E-mail de fallback enviado com sucesso para: {}. Status: {}", funcionario.getEmail(), response.statusCode());
-            } else {
-                log.error("Falha ao enviar e-mail de fallback para {}. Status: {}. Body: {}",
-                        funcionario.getEmail(), response.statusCode(), response.body());
-            }
-
-        } catch (Throwable t) {
-            log.error("FALHA CATASTRÓFICA ao tentar enviar e-mail. Causa Raiz:", t);
-        }
-    }
-    
-    private String formatarCorpoEmail(Funcionario funcionario, String magicLinkUrl) {
-        return String.format(
+        Email from = new Email(this.fromEmail);
+        String subject = "Seu Link de Acesso - F.L.E.E.T. Mottu";
+        Email to = new Email(funcionario.getEmail());
+        String emailBody = String.format(
             "Olá %s,\n\n" +
-            "Tivemos um problema ao enviar seu link de acesso via WhatsApp. Por favor, use o link abaixo. Ele é válido por 24 horas.\n\n" +
+            "Tivemos um problema ao enviar seu link de acesso via WhatsApp. Por favor, use o link abaixo para seu primeiro acesso. Ele é válido por 24 horas.\n\n" +
             "Seu link: %s\n\n" +
             "Atenciosamente,\nEquipe Mottu.",
             funcionario.getNome().split(" ")[0],
             magicLinkUrl);
+        Content content = new Content("text/plain", emailBody);
+        Mail mail = new Mail(from, subject, to, content);
+
+        Request request = new Request();
+        try {
+            request.setMethod(Method.POST);
+            request.setEndpoint("mail/send");
+            request.setBody(mail.build());
+            Response response = sendGridClient.api(request);
+            
+            if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
+                log.info("E-mail de fallback enviado com sucesso para: {}. Status: {}", funcionario.getEmail(), response.getStatusCode());
+            } else {
+                log.error("Falha ao enviar e-mail de fallback para {}. Status: {}. Body: {}",
+                        funcionario.getEmail(), response.getStatusCode(), response.getBody());
+            }
+        } catch (IOException e) {
+            log.error("FALHA CATASTRÓFICA ao tentar enviar e-mail. Causa Raiz:", e);
+        }
     }
-    
-    // --- Records auxiliares para montar o JSON do SendGrid ---
-    private record EmailAddress(String email) {}
-    private record Content(String type, String value) {}
-    private record Personalization(EmailAddress[] to) {}
-    private record SendGridMail(EmailAddress from, String subject, Personalization[] personalizations, Content[] content) {}
 }

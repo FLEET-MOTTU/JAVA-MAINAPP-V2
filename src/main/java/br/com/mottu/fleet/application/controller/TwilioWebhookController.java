@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.Map;
+import java.util.UUID; // ALTERAÇÃO 1: Importar UUID
 import java.util.stream.Collectors;
 
 
@@ -23,27 +24,23 @@ public class TwilioWebhookController {
     private final RequestValidator twilioRequestValidator;
 
     public TwilioWebhookController(NotificationProcessingService notificationProcessingService,
-                                 @Value("${twilio.auth-token}") String twilioAuthToken) {
+                                   @Value("${twilio.auth-token}") String twilioAuthToken) {
         this.notificationProcessingService = notificationProcessingService;
         this.twilioRequestValidator = new RequestValidator(twilioAuthToken);
     }
 
-
     @PostMapping(value = "/status", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ResponseEntity<Void> handleStatusUpdate(@RequestParam Map<String, String> allRequestParams,
-                                                 @RequestHeader("X-Twilio-Signature") String twilioSignature,
-                                                 HttpServletRequest request) {
+                                                   @RequestHeader("X-Twilio-Signature") String twilioSignature,
+                                                   HttpServletRequest request) {
         
-        // Constrói a URL do Twilio
         String url = request.getRequestURL().toString();
         
-        // Pega os parâmetros da requisição (Twilio envia como form-urlencoded)
         Map<String, String> formParams = request.getParameterMap().entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue()[0]));
 
-        // Garante que a requisição veio mesmo do Twilio
         if (!twilioRequestValidator.validate(url, formParams, twilioSignature)) {
-            return ResponseEntity.status(403).build();
+             return ResponseEntity.status(403).build();
         }
 
         String messageSid = allRequestParams.get("MessageSid");
@@ -55,5 +52,4 @@ public class TwilioWebhookController {
         
         return ResponseEntity.ok().build();
     }
-    
 }

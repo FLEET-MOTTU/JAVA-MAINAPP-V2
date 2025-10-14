@@ -80,7 +80,7 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         Funcionario funcionarioSalvo = funcionarioRepository.save(novoFuncionario);
         String link = magicLinkService.gerarLink(funcionarioSalvo);
 
-          TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
                 notificationService.enviarMagicLink(funcionarioSalvo, link);
