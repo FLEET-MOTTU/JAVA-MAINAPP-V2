@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.Map;
-import java.util.UUID; // ALTERAÇÃO 1: Importar UUID
 import java.util.stream.Collectors;
 
 
