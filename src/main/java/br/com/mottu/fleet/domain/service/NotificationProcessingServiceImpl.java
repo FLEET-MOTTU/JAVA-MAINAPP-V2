@@ -3,10 +3,9 @@ package br.com.mottu.fleet.domain.service;
 import br.com.mottu.fleet.domain.entity.Funcionario;
 import br.com.mottu.fleet.domain.entity.TokenAcesso;
 import br.com.mottu.fleet.domain.repository.TokenAcessoRepository;
+import br.com.mottu.fleet.infrastructure.router.NotificationServiceRouter;
 
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,14 +24,14 @@ public class NotificationProcessingServiceImpl implements NotificationProcessing
     private static final Logger log = LoggerFactory.getLogger(NotificationProcessingServiceImpl.class);
 
     private final TokenAcessoRepository tokenAcessoRepository;
-    private final NotificationService emailNotificationService;
     private final String baseUrl;
+    private final NotificationServiceRouter notificationRouter; // <-- POR ISTO
 
     public NotificationProcessingServiceImpl(TokenAcessoRepository tokenAcessoRepository,
-                                           @Qualifier("sendGridEmailNotificationServiceImpl") NotificationService emailNotificationService,
+                                           NotificationServiceRouter notificationRouter,
                                            @Value("${application.base-url}") String baseUrl) {
         this.tokenAcessoRepository = tokenAcessoRepository;
-        this.emailNotificationService = emailNotificationService;
+        this.notificationRouter = notificationRouter;
         this.baseUrl = baseUrl;
     }
 
@@ -45,7 +44,6 @@ public class NotificationProcessingServiceImpl implements NotificationProcessing
      * @param messageStatus O status da mensagem (ex: "failed", "undelivered").
      */    
     @Override
-    @Async
     @Transactional
     public void processarStatusDaMensagem(String messageSid, String messageStatus) {
         log.info("Webhook de status recebido. SID: {}, Status: {}", messageSid, messageStatus);
@@ -74,14 +72,11 @@ public class NotificationProcessingServiceImpl implements NotificationProcessing
     }
 
     private void enviarEmailDeFallback(TokenAcesso tokenAcesso) {
-        // A lógica de recuperação do funcionário e envio do e-mail
-        // LazyInitializationException pode ocorrer aqui se o método não for transacional.
-        // Se o erro voltar, adicione @Transactional no método processarStatusDaMensagem.
         Funcionario funcionario = tokenAcesso.getFuncionario(); 
         String magicLinkUrl = baseUrl + "/auth/validar-token?valor=" + tokenAcesso.getToken();
         
         log.info("Enviando e-mail de fallback para: {}", funcionario.getEmail());
-        emailNotificationService.enviarMagicLink(funcionario, magicLinkUrl);
+        notificationRouter.getService("sendGridEmailNotificationServiceImpl")
+            .enviarMagicLink(funcionario, magicLinkUrl);
     }
-
 }    

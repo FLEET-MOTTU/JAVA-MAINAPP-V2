@@ -12,6 +12,7 @@ import br.com.mottu.fleet.domain.exception.ResourceNotFoundException;
 import br.com.mottu.fleet.domain.repository.FuncionarioRepository;
 import br.com.mottu.fleet.domain.repository.PateoRepository;
 import br.com.mottu.fleet.domain.repository.specification.FuncionarioSpecification;
+import br.com.mottu.fleet.infrastructure.router.AsyncNotificationOrchestrator;
 
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -34,19 +35,19 @@ public class FuncionarioServiceImpl implements FuncionarioService {
     private final FuncionarioRepository funcionarioRepository;
     private final PateoRepository pateoRepository;
     private final MagicLinkService magicLinkService;
-    private final NotificationService notificationService;
     private final StorageService storageService;
+    private final AsyncNotificationOrchestrator asyncOrchestrator;
 
     public FuncionarioServiceImpl(FuncionarioRepository funcionarioRepository,
                                   PateoRepository pateoRepository,
                                   MagicLinkService magicLinkService,
-                                  NotificationService notificationService,
-                                  StorageService storageService) {
+                                  StorageService storageService,
+                                  AsyncNotificationOrchestrator asyncOrchestrator) {
         this.funcionarioRepository = funcionarioRepository;
         this.pateoRepository = pateoRepository;
         this.magicLinkService = magicLinkService;
-        this.notificationService = notificationService;
         this.storageService = storageService;
+        this.asyncOrchestrator = asyncOrchestrator;
     }
 
 
@@ -83,7 +84,7 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                notificationService.enviarMagicLink(funcionarioSalvo, link);
+                asyncOrchestrator.dispararNotificacaoPosCriacao(funcionarioSalvo.getId(), link);
             }
         });
 
