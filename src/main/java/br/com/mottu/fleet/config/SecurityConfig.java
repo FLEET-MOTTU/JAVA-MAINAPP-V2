@@ -47,7 +47,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // TO-DO: LEMBRAR DE TROCAR ISSO EM PROD
-        configuration.setAllowedOrigins(List.of("*"));
+        // configuration.setAllowedOrigins(List.of("*"));
+        configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
@@ -93,10 +94,10 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf
                 // Desabilita o CSRF especificamente para a rota de webhooks
-                .ignoringRequestMatchers("/webhooks/**")
+                .ignoringRequestMatchers("/ws/**")
             )
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/webhooks/**").permitAll()
+                .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/css/**", "/js/**", "/error").permitAll()
                 .requestMatchers("/login", "/auth/validar-token").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-resources/**").permitAll()

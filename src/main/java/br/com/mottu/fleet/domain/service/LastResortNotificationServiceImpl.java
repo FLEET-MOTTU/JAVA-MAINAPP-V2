@@ -1,6 +1,7 @@
 package br.com.mottu.fleet.domain.service;
 
 import br.com.mottu.fleet.domain.entity.Funcionario;
+import br.com.mottu.fleet.infrastructure.websocket.WebSocketNotificationService;
 
 import org.springframework.stereotype.Service;
 
@@ -8,24 +9,32 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-/**
- * Implementação de "último recurso" do NotificationService.
- * Acionada quando todos os outros métodos de notificação (WhatsApp, E-mail) falham.
- * Sua responsabilidade é registrar a falha de forma persistente ou alertar administradores.
- */
-@Service("lastResortNotificationService")
+@Service("lastResortNotificationServiceImpl")
 public class LastResortNotificationServiceImpl implements NotificationService {
 
     private static final Logger log = LoggerFactory.getLogger(LastResortNotificationServiceImpl.class);
+    private final WebSocketNotificationService webSocketService;
+
+    public LastResortNotificationServiceImpl(WebSocketNotificationService webSocketService) {
+        this.webSocketService = webSocketService;
+    }
 
     @Override
-    public void enviarMagicLink(Funcionario funcionario, String magicLinkUrl) {
-        log.error("FALHA FINAL DE NOTIFICAÇÃO! Não foi possível contatar o funcionário ID: {}", funcionario.getId());
-        log.error("O Magic Link que falhou em ser entregue é: {}", magicLinkUrl);
+    public void enviarMagicLink(Funcionario funcionario, String fallbackMagicLink) {
+        
+        String msg = String.format(
+            "FALHA FINAL: WhatsApp e E-mail falharam para %s. Ação manual necessária.",
+            funcionario.getNome()
+        );
+        
+        log.error("Acionando fallback final para o funcionário ID: {}. Link de resgate: {}",
+            funcionario.getId(), fallbackMagicLink);
 
-        // TODO: Ação final.
-        // Opção A: Salvar um registro em uma tabela de "AlertasAdmin".
-        // Opção B: Atualizar o status do próprio funcionário para "NOTIFICACAO_PENDENTE_MANUAL".
-        // Por enquanto, o log de erro já é uma ação muito valiosa.
+        webSocketService.sendNotificationStatus(
+            funcionario,
+            "FINAL_FAILURE",
+            msg,
+            fallbackMagicLink
+        );
     }
 }
