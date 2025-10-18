@@ -1,7 +1,9 @@
 package br.com.mottu.fleet.domain.entity;
 
 import br.com.mottu.fleet.domain.enums.Status;
+
 import jakarta.persistence.*;
+
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
@@ -9,6 +11,12 @@ import java.util.UUID;
 import java.util.Set;
 import java.util.HashSet;
 
+
+/**
+ * Entidade que representa um Pátio (unidade física) da Mottu.
+ * Contém os dados do pátio e seus relacionamentos com o admin que o gerencia,
+ * suas zonas e seus funcionários.
+ */
 @Entity
 @Table(name = "pateo")
 public class Pateo {
@@ -41,6 +49,9 @@ public class Pateo {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+
+    // Deleção em cascata: Se um Pátio for deletado, todas as Zonas
+    // associadas a ele também serão deletadas.
     @OneToMany(
             mappedBy = "pateo",
             cascade = CascadeType.ALL,
@@ -54,6 +65,7 @@ public class Pateo {
 
     public Pateo() {}    
 
+    
     public UUID getId() { return id; }
     public String getNome() { return nome; }
     public String getPlantaBaixaUrl() { return plantaBaixaUrl; }

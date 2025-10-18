@@ -21,7 +21,7 @@ public class TwilioConfig {
     private final String sendGridApiKey;
 
     /**
-     * Construtor que injeta todas as credenciais necessárias dos serviços Twilio.
+     * Construtor que injeta todas as credenciais necessárias dos serviços Twilio do env.
      * @param accountSid O Account SID da sua conta Twilio.
      * @param authToken O Auth Token da sua conta Twilio.
      * @param sendGridApiKey A chave da API do serviço SendGrid.

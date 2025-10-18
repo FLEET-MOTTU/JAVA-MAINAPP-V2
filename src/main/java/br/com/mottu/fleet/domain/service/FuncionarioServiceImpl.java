@@ -13,6 +13,7 @@ import br.com.mottu.fleet.domain.repository.FuncionarioRepository;
 import br.com.mottu.fleet.domain.repository.PateoRepository;
 import br.com.mottu.fleet.domain.repository.specification.FuncionarioSpecification;
 import br.com.mottu.fleet.infrastructure.router.AsyncNotificationOrchestrator;
+import br.com.mottu.fleet.infrastructure.service.StorageService;
 import br.com.mottu.fleet.infrastructure.publisher.FuncionarioEventPublisher;
 
 import org.springframework.data.jpa.domain.Specification;

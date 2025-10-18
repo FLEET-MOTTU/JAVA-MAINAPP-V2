@@ -6,7 +6,7 @@ import br.com.mottu.fleet.domain.enums.Role;
 import br.com.mottu.fleet.domain.enums.Status;
 import br.com.mottu.fleet.domain.repository.PateoRepository;
 import br.com.mottu.fleet.domain.repository.UsuarioAdminRepository;
-import br.com.mottu.fleet.domain.service.StorageService;
+import br.com.mottu.fleet.infrastructure.service.StorageService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

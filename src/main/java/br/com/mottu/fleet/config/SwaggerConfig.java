@@ -17,6 +17,11 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 
 
+/**
+ * Configuração centralizada do OpenAPI (Springdoc) para a documentação do Swagger UI.
+ * Define as informações globais da API, o esquema de segurança JWT
+ * e customizações para tipos de dados e URLs de servidor.
+ */
 @Configuration
 @OpenAPIDefinition(
     info = @Info(
@@ -35,9 +40,10 @@ import java.util.List;
 public class SwaggerConfig {
 
     /**
-     * Customizador para o OpenAPI que
-     * ensina o Swagger a exibir o tipo 'Polygon' do JTS
-     * como uma String no formato WKT, com descrição e exemplo
+     * Ensina o Swagger a exibir o tipo 'Polygon' da biblioteca JTS
+     * como uma String no formato WKT, com uma descrição e um exemplo claros.
+     *
+     * @return Um customizador do OpenAPI.
      */
     @Bean
     public OpenApiCustomizer openApiCustomizer() {
@@ -45,16 +51,21 @@ public class SwaggerConfig {
             Schema<?> polygonSchema = new StringSchema()
                     .description("Representação de um polígono em formato WKT (Well-Known Text)")
                     .example("POLYGON ((0.1 0.1, 0.4 0.1, 0.4 0.4, 0.1 0.4, 0.1 0.1))");
+
+            // Registra o schema customizado globalmente
             openApi.getComponents().getSchemas().put("Polygon", polygonSchema);
         };
     }
 
+
     /**
-     * Força o Swagger a usar a URL base da .env,
-     * resolve 'Mixed Content' ao usar proxy reverso com Ngrok
+     * Configura a URL do servidor da API no Swagger.
+     * Forçando o Swagger a usar a URL base definida no env,
+     * Config usada pra resolver problema de "Mixed Content" (HTTP/HTTPS)
+     * ao acessar a documentação através de um proxy reverso (Ngrok).
      *
-     * @param baseUrl A URL base da aplicação, injetada a partir de 'application.base-url'.
-     * @return Um objeto OpenAPI configurado.
+     * @param baseUrl A URL base da aplicação, injetada a partir da propriedade 'application.base-url'.
+     * @return Um objeto OpenAPI configurado com a URL do servidor correta.
      */
     @Bean
     public OpenAPI customOpenAPI(@Value("${application.base-url}") String baseUrl) {

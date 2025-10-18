@@ -1,8 +1,13 @@
 package br.com.mottu.fleet.application.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.Instant;
 
+
+/**
+ * DTO padrão para respostas de erro da API.
+ */
 @Schema(description = "DTO padrão para respostas de erro da API")
 public record ErrorResponse(
     @Schema(description = "Timestamp de quando o erro ocorreu", example = "2025-09-23T03:11:55.123Z")

@@ -2,33 +2,35 @@ package br.com.mottu.fleet.application.dto.web;
 
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 
-import io.swagger.v3.oas.annotations.media.Schema;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Pattern;
 
 import java.util.UUID;
 
-@Schema(description = "DTO para a atualização dos dados de um Administrador de Pátio")
+
+/**
+ * DTO para a atualização dos dados de um Administrador de Pátio
+ * a partir do painel do Super Admin.
+ */
 public class UsuarioAdminUpdateRequest {
 
-    @Schema(description = "ID do administrador que será atualizado", requiredMode = Schema.RequiredMode.REQUIRED)
     private UUID id;
 
     @NotBlank(message = "O novo nome não pode estar em branco.")
     @Size(min = 2, max = 100, message = "O nome deve ter entre 2 e 100 caracteres.")
-    @Schema(description = "Novo nome do administrador", example = "Carlos Souza")
     private String nome;
 
-    @Schema(description = "Email do administrador (Apenas para exibição, não pode ser alterado)",
-            example = "adminpateo@mottu.com", accessMode = Schema.AccessMode.READ_ONLY)
-    private String email;
+    private String email; // Readonly
 
     @Pattern(regexp = "^$|.{8,}", message = "A nova senha deve ter no mínimo 8 caracteres, se fornecida.")
-    @Schema(description = "Nova senha para o administrador. Deixe em branco para não alterar.", example = "novaSenha@123")
-    private String newPassword;
+    private String newPassword; // Opcional
 
+    /**
+     * Factory para criar a DTO usando a entidade UsuarioAdmin.
+     * @param usuario A entidade vinda do banco.
+     * @return Uma instância de UsuarioAdminUpdateRequest preenchida.
+     */
     public static UsuarioAdminUpdateRequest fromEntity(UsuarioAdmin usuario) {
         UsuarioAdminUpdateRequest request = new UsuarioAdminUpdateRequest();
         request.setId(usuario.getId());
@@ -47,5 +49,4 @@ public class UsuarioAdminUpdateRequest {
     public void setNome(String nome) { this.nome = nome; }
     public void setEmail(String email) { this.email = email; }
     public void setNewPassword(String newPassword) { this.newPassword = newPassword; }
-
 }

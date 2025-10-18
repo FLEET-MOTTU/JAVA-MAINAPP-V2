@@ -20,6 +20,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 
+/**
+ * Consumer que ouve a fila 'whatsapp-failures-queue' no Azure Service Bus.
+ * Responsável por receber o webhook de falha do Twilio (enviado pelo TwilioWebhookController),
+ * parsear a mensagem e delegar o processamento para o serviço de fallback.
+ */
 @Component
 public class WhatsappFailureListener {
 
@@ -42,32 +47,39 @@ public class WhatsappFailureListener {
                 .buildProcessorClient();
     }
 
-    /** Inicia o listener assim que o Spring sobe */
+
     @PostConstruct
     public void start() {
         log.info("Iniciando listener do Azure Service Bus para a fila 'whatsapp-failures-queue'...");
         processorClient.start();
     }
 
-    /** Para o listener ao encerrar o contexto */
+
     @PreDestroy
     public void stop() {
         log.info("Encerrando listener do Azure Service Bus...");
         processorClient.close();
     }
 
-    /** Handler chamado automaticamente quando chega uma mensagem */
+
+    /**
+     * Handler principal, chamado automaticamente para cada mensagem recebida na fila.
+     * @param context O contexto da mensagem recebida.
+     */
     private void handleMessage(ServiceBusReceivedMessageContext context) {
         ServiceBusReceivedMessage message = context.getMessage();
         String body = message.getBody().toString();
         log.info("Mensagem recebida da fila 'whatsapp-failures-queue': {}", body);
 
         try {
+            // 1. PARSE DO PAYLOAD
+            // O webhook do Twilio envia os dados como 'application/x-www-form-urlencoded'
             Map<String, String> params = parseUrlEncodedString(body);
 
             String messageSid = params.get("MessageSid");
             String messageStatus = params.get("MessageStatus");
-
+            
+            // 2. DELEGAÇÃO PARA O SERVIÇO DE PROCESSAMENTO
             if (messageSid != null && messageStatus != null) {
                 log.info("Processando falha para MessageSID: {} com status: {}", messageSid, messageStatus);
                 notificationProcessingService.processarStatusDaMensagem(messageSid, messageStatus);
@@ -75,8 +87,9 @@ public class WhatsappFailureListener {
                 log.warn("Mensagem da fila não continha MessageSid ou MessageStatus. Payload: {}", body);
             }
 
-            // Marca como processada (remove da fila)
+            // 3. CONFIRMAÇÃO DO PROCESSAMENTO
             context.complete();
+
         } catch (Exception e) {
             log.error("Erro ao processar mensagem da fila do Service Bus.", e);
 
@@ -92,14 +105,23 @@ public class WhatsappFailureListener {
         }
     }
 
-    /** Handler de erro */
+
+    /**
+     * Handler de erro do próprio listener do Service Bus (ex: falha de conexão).
+     * @param context O contexto do erro.
+     */
     private void handleError(ServiceBusErrorContext context) {
         log.error("Erro no listener do Azure Service Bus. Entidade: {}, Erro: {}",
                 context.getEntityPath(),
                 context.getException().getMessage());
     }
 
-    /** Conversão de payload form-urlencoded */
+
+    /**
+     * Método auxiliar para converter o payload do Twilio (form-urlencoded) em um Map.
+     * @param urlEncoded A string de payload.
+     * @return Um Map com os pares de chave/valor.
+     */
     private Map<String, String> parseUrlEncodedString(String urlEncoded) throws UnsupportedEncodingException {
         Map<String, String> map = new HashMap<>();
         String[] pairs = urlEncoded.split("&");
@@ -113,4 +135,5 @@ public class WhatsappFailureListener {
         }
         return map;
     }
+    
 }

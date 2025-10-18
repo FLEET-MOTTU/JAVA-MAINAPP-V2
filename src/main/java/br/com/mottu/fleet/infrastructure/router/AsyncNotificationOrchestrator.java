@@ -11,6 +11,13 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
+/**
+ * Orquestrador assíncrono para tarefas de notificação.
+ * Recebe uma solicitação de notificação da thread principal
+ * e executa em uma thread separada (@Async),
+ * permitindo que a API retorne o usuário criado imediatamente.
+ */
 @Service
 public class AsyncNotificationOrchestrator {
 
@@ -19,14 +26,20 @@ public class AsyncNotificationOrchestrator {
     private final NotificationService notificationService;
     private final FuncionarioRepository funcionarioRepository;
 
+    /**
+     * @param notificationService O serviço de notificação primário (marcado com @Primary, neste caso, o TwilioWhatsApp).
+     * @param funcionarioRepository Repositório para buscar os dados do funcionário na nova thread.
+     */
     public AsyncNotificationOrchestrator(NotificationService notificationService, FuncionarioRepository funcionarioRepository) {
         this.notificationService = notificationService;
         this.funcionarioRepository = funcionarioRepository;
     }
 
+
     /**
-     * Método executado em uma thread separada do pool de tarefas do Spring.
-     * Chama o serviço do Twilio pra desafogar a thread principal.
+     * Dispara o processo de envio de notificação (Magic Link).
+     * @param funcionarioId O ID do funcionário.
+     * @param magicLink A URL do Magic Link que foi gerada na thread principal.
      */
     @Async
     public void dispararNotificacaoPosCriacao(UUID funcionarioId, String magicLink) {
@@ -34,6 +47,7 @@ public class AsyncNotificationOrchestrator {
 
         funcionarioRepository.findById(funcionarioId).ifPresent(funcionario -> {
             try {
+                // Chama o serviço de notificação primário (Twilio WhatsApp)
                 notificationService.enviarMagicLink(funcionario, magicLink);
                 log.info("Chamada de notificação assíncrona para o funcionário ID {} concluída.", funcionarioId);
             } catch (Exception e) {

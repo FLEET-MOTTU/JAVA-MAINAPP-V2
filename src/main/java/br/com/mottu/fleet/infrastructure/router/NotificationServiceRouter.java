@@ -9,13 +9,22 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+
+/**
+ * Componente de infraestrutura que cataloga todas as implementações da interface NotificationService
+ * e permite que outros serviços selecionem uma implementação específica em tempo de execução
+ * usando um qualificador (o nome da classe do bean).
+ */
 @Component
 public class NotificationServiceRouter {
 
+    // Um Map onde a chave é o nome do bean
     private final Map<String, NotificationService> serviceMap;
 
     /**
-     * Lista de todos os beans que implementam a NotificationService
+     * Construtor que utiliza a injeção de lista do Spring.
+     * O Spring injeta automaticamente todos os beans que implementam a interface NotificationService.
+     * @param services A lista de todas as implementações de NotificationService encontradas no contexto.
      */
     public NotificationServiceRouter(List<NotificationService> services) {
         this.serviceMap = services.stream()
@@ -24,11 +33,14 @@ public class NotificationServiceRouter {
                     Function.identity()
                 ));
     }
+
     
     /**
-     * Retorna uma implementação específica do NotificationService
-     * @param qualifier O nome do bean
+     * Retorna uma implementação específica do NotificationService com base no qualifier.
+     *
+     * @param qualifier O nome do bean (ex: "sendGridEmailNotificationServiceImpl").
      * @return A instância do serviço correspondente.
+     * @throws IllegalArgumentException Se nenhum serviço for encontrado para o qualificador.
      */
     public NotificationService getService(String qualifier) {
         NotificationService service = serviceMap.get(qualifier);
@@ -40,4 +52,5 @@ public class NotificationServiceRouter {
         }
         return service;
     }
+    
 }

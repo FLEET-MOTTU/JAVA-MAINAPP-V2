@@ -16,12 +16,8 @@ public class JacksonConfig {
     /**
      * Cria e expõe um bean ObjectMapper customizado.
      * 1. Registra o JavaTimeModule para que o Jackson saiba como serializar/desserializar
-     * tipos de data/hora do Java 8+ (como Instant, LocalDate, etc.). Resolve o erro de
-     * 'InvalidDefinitionException' para java.time.Instant.
-     * 2. O Spring Boot reutilizará este ObjectMapper para todas as operações de JSON,
-     * incluindo a conversão de partes de requisições multipart, resolvendo o erro de
-     * 'Content-Type 'application/octet-stream' is not supported'.
-     *
+     * tipos de data/hora (Instant, LocalDate, etc.)
+     * 2. O Spring Boot usa esse ObjectMapper pra todas as operações de JSON
      * @return Um ObjectMapper configurado.
      */
     @Bean
@@ -31,4 +27,5 @@ public class JacksonConfig {
         objectMapper.registerModule(new JavaTimeModule());
         return objectMapper;
     }
+    
 }

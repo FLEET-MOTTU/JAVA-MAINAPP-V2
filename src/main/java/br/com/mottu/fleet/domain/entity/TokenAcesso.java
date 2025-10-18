@@ -5,6 +5,11 @@ import java.time.Instant;
 import java.util.UUID;
 
 
+/**
+ * Entidade que representa o Token de Acesso de uso único (Magic Link).
+ * Este é o "convite" inicial enviado ao funcionário. Ele é validado e
+ * queimado (marcado como 'usado') na primeira etapa do login.
+ */
 @Entity
 @Table(name = "token_acesso")
 public class TokenAcesso {
@@ -33,6 +38,7 @@ public class TokenAcesso {
     private String twilioMessageSid;
     
     public TokenAcesso() {}
+    
 
     public UUID getId() { return id; }
     public String getToken() { return token; }

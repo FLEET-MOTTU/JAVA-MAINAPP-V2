@@ -1,4 +1,6 @@
-package br.com.mottu.fleet.domain.service;
+package br.com.mottu.fleet.infrastructure.service;
+
+import br.com.mottu.fleet.domain.exception.StorageException;
 
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
@@ -10,9 +12,6 @@ import com.azure.storage.blob.options.BlobParallelUploadOptions;
 
 import jakarta.annotation.PostConstruct;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -21,6 +20,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.UUID;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 /**
  * Implementação do StorageService que utiliza o Azure Blob Storage.
@@ -31,13 +35,20 @@ import java.util.UUID;
 public class AzureBlobStorageServiceImpl implements StorageService {
 
     private static final Logger log = LoggerFactory.getLogger(AzureBlobStorageServiceImpl.class);
+
     private final String connectionString;
     private BlobServiceClient blobServiceClient;
+    private static final List<String> ALLOWED_IMAGE_TYPES = List.of("image/jpeg", "image/png", "image/gif");
 
     public AzureBlobStorageServiceImpl(@Value("${azure.storage.connection-string}") String connectionString) {
         this.connectionString = connectionString;
     }
 
+
+    /**
+     * Inicializa o cliente do Azure Blob Service usando a string de conexão
+     * assim que o bean é construído.
+     */
     @PostConstruct
     public void init() {
         this.blobServiceClient = new BlobServiceClientBuilder()
@@ -45,6 +56,17 @@ public class AzureBlobStorageServiceImpl implements StorageService {
                 .buildClient();
     }
 
+
+    /**
+     * Faz o upload de um arquivo genérico a partir de um InputStream.
+     * Usado pelo DataInitializer (Seeder).
+     * @param containerName O nome do contêiner (ex: "plantas").
+     * @param blobName O nome exato do arquivo a ser salvo (ex: "planta-pateo-teste.png").
+     * @param data O fluxo de dados do arquivo.
+     * @param length O tamanho do arquivo em bytes.
+     * @return A URL pública do arquivo.
+     * @throws StorageException Se o upload falhar.
+     */
     @Override
     public String upload(String containerName, String blobName, InputStream data, long length) {
         BlobContainerClient containerClient = getOrCreateContainer(containerName);

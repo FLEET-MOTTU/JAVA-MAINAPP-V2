@@ -1,4 +1,4 @@
-package br.com.mottu.fleet.domain.service;
+package br.com.mottu.fleet.infrastructure.service;
 
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;

@@ -1,8 +1,7 @@
 package br.com.mottu.fleet.infrastructure.websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -19,10 +18,20 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.net.URI;
 import java.util.Objects;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
+/**
+ * Handler principal para as conexões WebSocket dos Admins de Pátio.
+ * Gerencia o ciclo de vida das sessões e envia notificações direcionadas 
+ * para consumo do frontend sobre o status do envio do Magic Link.
+ */
 @Component
 public class AdminNotificationSocketHandler extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(AdminNotificationSocketHandler.class);
+
     private final Map<UUID, WebSocketSession> sessions = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper;
 
@@ -30,9 +39,16 @@ public class AdminNotificationSocketHandler extends TextWebSocketHandler {
         this.objectMapper = objectMapper;
     }
 
+
+    /**
+     * Chamado após uma nova conexão WebSocket ser estabelecida.
+     * PateoId é extraído das claims para associar a sessão ao pátio correto.
+     * @param session A nova sessão WebSocket.
+     */
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) throws Exception {
-        // Extraímos o pateoId dos parâmetros da URL de conexão (ex: /ws/notifications?pateoId=...)
+        log.info("Nova conexão WebSocket estabelecida: {}", session.getId());
+
         UUID pateoId = getPateoIdFromSession(session);
         if (pateoId != null) {
             sessions.put(pateoId, session);
@@ -43,8 +59,17 @@ public class AdminNotificationSocketHandler extends TextWebSocketHandler {
         }
     }
 
+
+    /**
+     * Chamado após uma conexão WebSocket ser encerrada.
+     * Remove a sessão da lista de conexões ativas para evitar memory leak.
+     * @param session A sessão que foi fechada.
+     * @param status O motivo do fechamento.
+     */
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) throws Exception {
+        log.info("Conexão WebSocket encerrada: {}. Status: {}", session.getId(), status.getCode());
+
         UUID pateoId = getPateoIdFromSession(session);
         if (pateoId != null) {
             sessions.remove(pateoId);
@@ -52,6 +77,12 @@ public class AdminNotificationSocketHandler extends TextWebSocketHandler {
         }
     }
 
+
+    /**
+     * Envia uma notificação em tempo real para o admin de um pátio específico.
+     * @param pateoId O ID do pátio para o qual a notificação se destina.
+     * @param payload O objeto de dados a ser enviado como JSON.
+     */
     public void sendMessageToPateo(UUID pateoId, Object payload) {
         WebSocketSession session = sessions.get(pateoId);
         if (session != null && session.isOpen()) {
@@ -67,6 +98,10 @@ public class AdminNotificationSocketHandler extends TextWebSocketHandler {
         }
     }
 
+
+    /**
+     * Método auxiliar para extrair o PateoId dos parâmetros da URI da sessão.
+     */
     private @Nullable UUID getPateoIdFromSession(WebSocketSession session) {
 
         if (session.getUri() == null) {
