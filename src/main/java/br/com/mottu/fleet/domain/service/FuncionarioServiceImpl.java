@@ -13,6 +13,7 @@ import br.com.mottu.fleet.domain.repository.FuncionarioRepository;
 import br.com.mottu.fleet.domain.repository.PateoRepository;
 import br.com.mottu.fleet.domain.repository.specification.FuncionarioSpecification;
 import br.com.mottu.fleet.infrastructure.router.AsyncNotificationOrchestrator;
+import br.com.mottu.fleet.infrastructure.publisher.FuncionarioEventPublisher;
 
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -37,17 +38,20 @@ public class FuncionarioServiceImpl implements FuncionarioService {
     private final MagicLinkService magicLinkService;
     private final StorageService storageService;
     private final AsyncNotificationOrchestrator asyncOrchestrator;
+    private final FuncionarioEventPublisher eventPublisher;
 
     public FuncionarioServiceImpl(FuncionarioRepository funcionarioRepository,
                                   PateoRepository pateoRepository,
                                   MagicLinkService magicLinkService,
                                   StorageService storageService,
-                                  AsyncNotificationOrchestrator asyncOrchestrator) {
+                                  AsyncNotificationOrchestrator asyncOrchestrator,
+                                  FuncionarioEventPublisher eventPublisher) {
         this.funcionarioRepository = funcionarioRepository;
         this.pateoRepository = pateoRepository;
         this.magicLinkService = magicLinkService;
         this.storageService = storageService;
         this.asyncOrchestrator = asyncOrchestrator;
+        this.eventPublisher = eventPublisher;
     }
 
 
@@ -85,9 +89,10 @@ public class FuncionarioServiceImpl implements FuncionarioService {
             @Override
             public void afterCommit() {
                 asyncOrchestrator.dispararNotificacaoPosCriacao(funcionarioSalvo.getId(), link);
+                eventPublisher.publishFuncionarioEvent(funcionarioSalvo, "FUNCIONARIO_CRIADO");
             }
         });
-
+        
         return funcionarioSalvo;
     }
 
@@ -134,7 +139,10 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         funcionario.setCargo(Cargo.valueOf(request.getCargo()));
         funcionario.setStatus(Status.valueOf(request.getStatus()));
 
-        return funcionarioRepository.save(funcionario);
+        Funcionario funcionarioAtualizado = funcionarioRepository.save(funcionario);
+        eventPublisher.publishFuncionarioEvent(funcionarioAtualizado, "FUNCIONARIO_ATUALIZADO");
+
+        return funcionarioAtualizado;
     }    
 
 
@@ -161,7 +169,10 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         String fotoUrl = storageService.upload("fotos", foto);
 
         funcionario.setFotoUrl(fotoUrl);
-        return funcionarioRepository.save(funcionario);
+        Funcionario funcionarioAtualizadoFoto = funcionarioRepository.save(funcionario);
+        eventPublisher.publishFuncionarioEvent(funcionarioAtualizadoFoto, "FUNCIONARIO_ATUALIZADO_FOTO");
+
+        return funcionarioAtualizadoFoto;
     }
 
 
@@ -177,7 +188,8 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         Funcionario funcionario = findFuncionarioByIdAndCheckPateo(id, pateoDoAdmin.getId());
 
         funcionario.setStatus(Status.REMOVIDO);
-        funcionarioRepository.save(funcionario);
+        Funcionario funcionarioDesativado = funcionarioRepository.save(funcionario);
+        eventPublisher.publishFuncionarioEvent(funcionarioDesativado, "FUNCIONARIO_DESATIVADO");
     }
 
     /**
@@ -198,7 +210,8 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         }
 
         funcionario.setStatus(Status.ATIVO);
-        funcionarioRepository.save(funcionario);
+        Funcionario funcionarioReativado = funcionarioRepository.save(funcionario);
+        eventPublisher.publishFuncionarioEvent(funcionarioReativado, "FUNCIONARIO_REATIVADO");
     }
 
     
