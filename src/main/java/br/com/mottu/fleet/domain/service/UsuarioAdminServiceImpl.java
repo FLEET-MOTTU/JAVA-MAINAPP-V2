@@ -1,9 +1,14 @@
 package br.com.mottu.fleet.domain.service;
 
+import br.com.mottu.fleet.domain.entity.Funcionario;
 import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 import br.com.mottu.fleet.domain.repository.UsuarioAdminRepository;
+import br.com.mottu.fleet.domain.repository.AuthCodeRepository;
+import br.com.mottu.fleet.domain.repository.FuncionarioRepository;
 import br.com.mottu.fleet.domain.repository.PateoRepository;
+import br.com.mottu.fleet.domain.repository.RefreshTokenRepository;
+import br.com.mottu.fleet.domain.repository.TokenAcessoRepository;
 import br.com.mottu.fleet.domain.enums.Role;
 import br.com.mottu.fleet.domain.enums.Status;
 import br.com.mottu.fleet.domain.exception.BusinessException;
@@ -23,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 import java.util.Optional;
+import java.util.List;
 
 
 /**
@@ -35,14 +41,26 @@ public class UsuarioAdminServiceImpl implements UsuarioAdminService {
     private final UsuarioAdminRepository usuarioAdminRepository;
     private final PateoRepository pateoRepository;
     private final PasswordEncoder passwordEncoder;
+    private final FuncionarioRepository funcionarioRepository;
+    private final TokenAcessoRepository tokenAcessoRepository;
+    private final AuthCodeRepository authCodeRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Autowired
     public UsuarioAdminServiceImpl(UsuarioAdminRepository usuarioAdminRepository,
-                                   PateoRepository pateoRepository,
-                                   PasswordEncoder passwordEncoder) {
+                                    PateoRepository pateoRepository,
+                                    PasswordEncoder passwordEncoder,
+                                    FuncionarioRepository funcionarioRepository,
+                                    TokenAcessoRepository tokenAcessoRepository,
+                                    AuthCodeRepository authCodeRepository,
+                                    RefreshTokenRepository refreshTokenRepository) {
         this.usuarioAdminRepository = usuarioAdminRepository;
         this.pateoRepository = pateoRepository;
         this.passwordEncoder = passwordEncoder;
+        this.funcionarioRepository = funcionarioRepository;
+        this.tokenAcessoRepository = tokenAcessoRepository;
+        this.authCodeRepository = authCodeRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
     }
     
 
@@ -181,6 +199,49 @@ public class UsuarioAdminServiceImpl implements UsuarioAdminService {
             pateo.setStatus(Status.ATIVO);
             pateoRepository.save(pateo);
         });
+    }
+
+
+    /**
+     * Realiza o HARD DELETE de um funcionário e todos os seus tokens associados.
+     * Esta é uma operação de Super Admin e não deve ser exposta na API pública.
+     * @param id O UUID do funcionário a ser deletado.
+     */
+    @Override
+    @Transactional
+    public void deletarFuncionarioPermanentemente(UUID id) {
+        if (!funcionarioRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Funcionário com ID " + id + " não encontrado.");
+        }
+
+        // 1. Limpa os tokens associados (por causa das Foreign Keys)
+        tokenAcessoRepository.deleteAllByFuncionarioId(id);
+        authCodeRepository.deleteAllByFuncionarioId(id);
+        refreshTokenRepository.deleteAllByFuncionarioId(id);
+
+        // 2. Agora o Hard Delete
+        funcionarioRepository.deleteById(id);
+    }
+
+
+    /**
+     * Lista TODOS os funcionários de TODOS os pátios (visão de Super Admin).
+     * @return Lista de funcionários com dados do pátio já carregados.
+     */
+    @Override
+    public List<Funcionario> listarTodosFuncionariosComPateo() {
+        return funcionarioRepository.findAllWithPateo();
+    }
+
+
+    /**
+     * Lista TODOS os funcionários de UM pátio específico (visão de Super Admin).
+     * @param pateoId O UUID do pátio para filtrar.
+     * @return Lista de funcionários daquele pátio.
+     */
+    @Override
+    public List<Funcionario> listarTodosFuncionariosPorPateoId(UUID pateoId) {
+        return funcionarioRepository.findAllByPateoIdWithPateo(pateoId);
     }
 
 

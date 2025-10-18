@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main-layout :: layout(~{::title}, ~{::section})}">
+<head>
+    <title>Monitoramento de Filas</title>
+</head>
+<body>
+<section>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Monitoramento de Filas</h1>
+        <a th:href="@{/admin/filas}" class="btn btn-primary">
+            <i class="bi bi-arrow-clockwise"></i> Atualizar
+        </a>
+    </div>
+
+    <div class="row">
+        <div th:each="entry : ${queueStats}" class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0 font-monospace" th:text="${entry.key}">nome-da-fila</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Mensagens Ativas (Aguardando processamento)
+                            <span class="badge bg-primary rounded-pill fs-6" th:text="${entry.value.getActiveMessageCount()}">0</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Mensagens na "Dead Letter" (Falharam)
+                            <span class="badge bg-danger rounded-pill fs-6" th:text="${entry.value.getDeadLetterMessageCount()}">0</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Mensagens Agendadas
+                            <span class="badge bg-secondary rounded-pill" th:text="${entry.value.getScheduledMessageCount()}">0</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Total de Mensagens na Fila
+                            <span class="badge bg-dark rounded-pill" th:text="${entry.value.getTotalMessageCount()}">0</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-footer text-muted small">
+                    Última atualização: <span th:text="${#temporals.format(entry.value.getAccessedAt(), 'dd/MM/yyyy HH:mm:ss')}"></span>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${#maps.isEmpty(queueStats)}" class="col-12">
+            <div class="alert alert-warning" role="alert">
+                Nenhuma estatística de fila foi encontrada. Verifique se as filas existem na Azure.
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main-layout :: layout(~{::title}, ~{::section})}">
+<head>
+    <title>Gerenciamento Mestre de Funcionários</title>
+</head>
+<body>
+<section>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Gerenciamento Mestre de Funcionários</h1>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body d-flex justify-content-end align-items-center">
+            <form th:action="@{/admin/funcionarios}" method="get" class="d-flex align-items-center">
+                <label for="pateoId" class="form-label me-2 mb-0">Filtrar por Pátio:</label>
+                <select id="pateoId" name="pateoId" class="form-select me-2" style="width: auto;" onchange="this.form.submit()">
+                    <option value="">-- Todos os Pátios --</option>
+                    <option th:each="pateo : ${pateos}"
+                            th:value="${pateo.id}"
+                            th:text="${pateo.nome}"
+                            th:selected="${pateo.id.equals(filtroPateoId)}">
+                        </option>
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table table-hover align-middle">
+                <thead class="table-dark">
+                <tr>
+                    <th>ID do Funcionário</th>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Telefone</th>
+                    <th>Pátio Associado</th>
+                    <th>Status</th>
+                    <th class="text-end">Ações (Permanentes)</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="func : ${funcionarios}">
+                    <td><small class="text-muted font-monospace" th:text="${func.id}"></small></td>
+                    <td th:text="${func.nome}"></td>
+                    <td th:text="${func.email}"></td>
+                    <td class="font-monospace" th:text="${func.telefone}"></td>
+                    <td th:text="${func.pateo.nome}"></td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${func.status.name() == 'ATIVO'} ? 'bg-success' : (${func.status.name() == 'SUSPENSO'} ? 'bg-warning text-dark' : 'bg-danger')"
+                              th:text="${func.status.name()}"></span>
+                    </td>
+                    <td class="text-end">
+                        <form th:action="@{/admin/funcionarios/{id}/delete-hard(id=${func.id})}" method="post" class="d-inline"
+                              onsubmit="return confirm('ATENÇÃO! Isso vai apagar o funcionário PERMANENTEMENTE do banco de dados (hard delete). Esta ação não pode ser desfeita e pode afetar registros históricos. Deseja continuar?');">
+                            <button type="submit" class="btn btn-sm btn-danger" title="Excluir Permanentemente">
+                                <i class="bi bi-trash-fill"></i> Hard Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(funcionarios)}">
+                    <td colspan="7" class="text-center p-4">Nenhum funcionário encontrado para este filtro.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+</body>
+</html>

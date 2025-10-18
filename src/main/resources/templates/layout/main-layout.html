@@ -23,9 +23,19 @@
                 <li class="nav-item">
                     <a class="nav-link" th:href="@{/admin/usuarios}" th:classappend="${requestURI != null && requestURI.startsWith('/admin/usuarios')} ? 'active' : ''">Gerenciar Admins</a>
                 </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/admin/funcionarios}" th:classappend="${requestURI != null && requestURI.startsWith('/admin/funcionarios')} ? 'active' : ''">Gerenciar Funcionários</a>
+                </li>
+                
                 <li class="nav-item">
                     <a class="nav-link" th:href="@{/admin/onboarding/novo}" th:classappend="${requestURI != null && requestURI.startsWith('/admin/onboarding')} ? 'active' : ''">Cadastrar Unidade</a>
                 </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/admin/filas}" th:classappend="${requestURI != null && requestURI.startsWith('/admin/filas')} ? 'active' : ''">Monitorar Filas</a>
+                </li>
+
             </ul>
             <form th:action="@{/logout}" method="post">
                 <button class="btn btn-light" type="submit">

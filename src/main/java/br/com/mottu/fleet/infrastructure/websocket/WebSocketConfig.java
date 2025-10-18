@@ -7,7 +7,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 import org.springframework.lang.NonNull;
 
 @Configuration
-// @EnableWebSocket
+@EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final AdminNotificationSocketHandler adminNotificationSocketHandler;
