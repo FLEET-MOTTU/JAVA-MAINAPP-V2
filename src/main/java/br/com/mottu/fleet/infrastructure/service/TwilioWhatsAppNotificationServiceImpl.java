@@ -1,8 +1,10 @@
-package br.com.mottu.fleet.domain.service;
+package br.com.mottu.fleet.infrastructure.service;
 
 import br.com.mottu.fleet.domain.entity.Funcionario;
 import br.com.mottu.fleet.domain.entity.TokenAcesso;
 import br.com.mottu.fleet.domain.repository.TokenAcessoRepository;
+import br.com.mottu.fleet.domain.service.NotificationService;
+import br.com.mottu.fleet.domain.service.TokenUpdateService;
 
 import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.type.PhoneNumber;
@@ -14,10 +16,15 @@ import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 /**
  * Implementação do NotificationService que utiliza a API do Twilio para enviar mensagens via WhatsApp.
- * Esta classe é responsável por formatar os números, construir a mensagem, se comunicar com o serviço externo
- * e rastrear o ID da mensagem (MessageSID) para consultas de status.
+ * Esta é a implementação primária (@Primary), sendo a primeira tentativa de notificação.
+ * Responsável por:
+ * 1. Formatar a mensagem e o número de telefone.
+ * 2. Enviar a mensagem pela API do Twilio.
+ * 3. Rastrear o ID da mensagem (MessageSID) no TokenAcesso correspondente
+ * para permitir o monitoramento de status de entrega (via listener).
  */
 @Service
 @Primary
@@ -39,18 +46,22 @@ public class TwilioWhatsAppNotificationServiceImpl implements NotificationServic
 
 
     /**
-     * Envia uma mensagem de WhatsApp para um funcionário contendo seu Magic Link de primeiro acesso.
+     * Envia uma mensagem de WhatsApp para um funcionário contendo seu Magic Link.
+     * Este método também extrai o token da URL para encontrar e atualizar
+     * o registro TokenAcesso com o MessageSID retornado pelo Twilio.
      *
-     * @param funcionario O objeto do funcionário que receberá a mensagem. Seu telefone será usado como destino.
+     * @param funcionario O objeto do funcionário que receberá a mensagem.
      * @param magicLinkUrl A URL completa do Magic Link a ser enviada.
      */
     @Override
     public void enviarMagicLink(Funcionario funcionario, String magicLinkUrl) {
         try {
+            // 1. Encontra o TokenAcesso no banco usando o UUID da URL
             String tokenUuid = extrairTokenDaUrl(magicLinkUrl);
             TokenAcesso tokenAcesso = tokenAcessoRepository.findByToken(tokenUuid)
                     .orElseThrow(() -> new IllegalStateException("TokenAcesso não encontrado para a URL do Magic Link: " + magicLinkUrl));
 
+            // 2. Formata a mensagem
             String numeroDestino = formatarParaE164(funcionario.getTelefone());
             String corpoMensagem = String.format(
                 "Olá %s, bem-vindo ao F.L.E.E.T.! Para seu primeiro acesso, use o link a seguir. Ele é válido por 24 horas: %s",
@@ -61,11 +72,11 @@ public class TwilioWhatsAppNotificationServiceImpl implements NotificationServic
             PhoneNumber to = new PhoneNumber("whatsapp:" + numeroDestino);
             PhoneNumber from = new PhoneNumber(this.twilioWhatsappNumber);
 
-            // VOLTAMOS A CHAMADA SIMPLES, SEM 'setStatusCallback'
-            Message message = Message.creator(to, from, corpoMensagem).create();
+            // 3. Envia a mensagem via API Twilio
+            Message message = Message.creator(to, from, corpoMensagem).create();   
             
+            // 4. Captura e salva o SID da mensagem no token
             String messageSid = message.getSid();
-
             tokenUpdateService.atualizarMessageSid(tokenAcesso.getId(), messageSid);
             
             log.info("Magic Link enviado via WhatsApp para {}. MessageSID: {}", funcionario.getNome(), messageSid);
@@ -78,8 +89,6 @@ public class TwilioWhatsAppNotificationServiceImpl implements NotificationServic
 
     /**
      * Método auxiliar para extrair o UUID do token do final da URL do Magic Link.
-     * @param magicLinkUrl para validação da integridade do token
-     * @return uuid extraído do corpo do token
      */
     private String extrairTokenDaUrl(String magicLinkUrl) {
         return magicLinkUrl.substring(magicLinkUrl.lastIndexOf("=") + 1);
@@ -88,9 +97,6 @@ public class TwilioWhatsAppNotificationServiceImpl implements NotificationServic
 
     /**
      * Método auxiliar para garantir que o número de telefone esteja no formato E.164 (+55119...).
-     * Remove caracteres não numéricos e adiciona o código do país (+55).
-     * @param telefone O número de telefone em qualquer formato.
-     * @return O número de telefone formatado no padrão E.164.
      */
     private String formatarParaE164(String telefone) {
         String apenasNumeros = telefone.replaceAll("[^0-9]", "");
@@ -98,6 +104,7 @@ public class TwilioWhatsAppNotificationServiceImpl implements NotificationServic
         if (apenasNumeros.startsWith("55")) {
             return "+" + apenasNumeros;
         }
+
         return "+55" + apenasNumeros;
     }
 }

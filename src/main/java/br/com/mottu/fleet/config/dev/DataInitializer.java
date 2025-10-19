@@ -6,7 +6,7 @@ import br.com.mottu.fleet.domain.enums.Role;
 import br.com.mottu.fleet.domain.enums.Status;
 import br.com.mottu.fleet.domain.repository.PateoRepository;
 import br.com.mottu.fleet.domain.repository.UsuarioAdminRepository;
-import br.com.mottu.fleet.infrastructure.service.StorageService;
+import br.com.mottu.fleet.domain.service.StorageService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,7 +88,13 @@ public class DataInitializer implements CommandLineRunner {
                 ClassPathResource resource = new ClassPathResource("static/images/plantas/planta-pateo-teste.png");
                 try (InputStream inputStream = resource.getInputStream()) {
                     long length = resource.contentLength();
-                    plantaUrl = storageService.upload("plantas", "planta-pateo-teste.png", inputStream, length);
+                    plantaUrl = storageService.upload(
+                        "plantas", 
+                        "planta-pateo-teste.png", 
+                        inputStream, 
+                        length, 
+                        "image/png"
+                    );
                 }
             } catch (Exception e) {
                 log.error("Falha ao fazer upload da planta de teste: {}", e.getMessage());

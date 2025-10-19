@@ -7,6 +7,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
+/**
+ * Serviço de domínio que orquestra o processo de "Onboarding".
+ * Implementa o caso de uso de criação de uma nova unidade Mottu completa,
+ * que envolve a criação de um Pátio e seu Administrador principal
+ * de forma atômica (transacional).
+ */
 @Service
 public class OnboardingServiceImpl implements OnboardingService {
 
@@ -18,6 +25,7 @@ public class OnboardingServiceImpl implements OnboardingService {
         this.usuarioAdminService = usuarioAdminService;
         this.pateoService = pateoService;
     }
+
 
     /**
      * Orquestra o processo de onboarding de uma nova unidade Mottu.
@@ -35,4 +43,5 @@ public class OnboardingServiceImpl implements OnboardingService {
         UsuarioAdmin adminSalvo = usuarioAdminService.criarAdminDePateo(request);
         pateoService.criarPateo(request, adminSalvo);
     }
+    
 }

@@ -20,9 +20,16 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+
+/**
+ * Implementação do serviço de domínio que contém as regras de negócio
+ * para o gerenciamento de Pátios.
+ */
 @Service
 public class PateoServiceImpl implements PateoService {
 
@@ -30,19 +37,32 @@ public class PateoServiceImpl implements PateoService {
     private final TokenAcessoRepository tokenAcessoRepository;
     private final String baseUrl;
     
-    public PateoServiceImpl(PateoRepository pateoRepository, 
-                              TokenAcessoRepository tokenAcessoRepository, 
-                              @Value("${application.base-url}") String baseUrl) {
+    public PateoServiceImpl(PateoRepository pateoRepository,
+                            TokenAcessoRepository tokenAcessoRepository,
+                            @Value("${application.base-url}") String baseUrl) {
         this.pateoRepository = pateoRepository;
         this.tokenAcessoRepository = tokenAcessoRepository;
         this.baseUrl = baseUrl;
     }
 
+
+    /**
+     * Lista todos os pátios que estão com status ATIVO.
+     * @return Uma lista de entidades Pateo.
+     */
     @Override
     public List<Pateo> listarTodosAtivos() {
         return pateoRepository.findAllByStatus(Status.ATIVO);
     }
 
+
+    /**
+     * Cria um novo pátio e o associa a um administrador.
+     * Chamado pelo fluxo de onboarding.
+     * @param request DTO com os dados do novo pátio (nome).
+     * @param adminResponsavel A entidade UsuarioAdmin que gerenciará este pátio.
+     * @return A entidade Pateo salva.
+     */
     @Override
     @Transactional
     public Pateo criarPateo(OnboardingRequest request, UsuarioAdmin adminResponsavel) {
@@ -53,10 +73,16 @@ public class PateoServiceImpl implements PateoService {
         return pateoRepository.save(novoPateo);
     }
 
+
     /**
-     * Busca os detalhes de um pátio, incluindo suas zonas, e valida se o admin logado
-     * tem permissão de acesso.
-     * REGRA DE NEGÓCIO: Um admin só pode acessar detalhes do pátio que ele gerencia.
+     * Busca os detalhes de um pátio (incluindo zonas) para a API REST.
+     * Este método valida se o admin logado tem permissão para acessar o pátio solicitado.
+     *
+     * @param pateoId O UUID do pátio a ser buscado.
+     * @param adminLogado O admin de pátio autenticado.
+     * @return A entidade Pateo com a coleção de Zonas carregada.
+     * @throws SecurityException Se o pátio não pertencer ao admin.
+     * @throws ResourceNotFoundException Se o pátio não for encontrado.
      */
     @Override
     public Pateo buscarDetalhesDoPateo(UUID pateoId, UsuarioAdmin adminLogado) {
@@ -71,38 +97,37 @@ public class PateoServiceImpl implements PateoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Pátio com ID " + pateoId + " não encontrado."));
     }
 
-    /**
-     * Método para buscar o pátio associado a um admin.
-     * Centraliza a regra de negócio de que um admin deve ter um pátio.
-     */
-    private Pateo getPateoDoAdmin(UsuarioAdmin adminLogado) {
-        return pateoRepository.findAllByGerenciadoPorId(adminLogado.getId())
-                .stream().findFirst()
-                .orElseThrow(() -> new BusinessException("Admin não está associado a nenhum pátio."));
-    }
-    
-    /**
-     * Método personalizado para buscar o pátio com suas zonas.
-     * Da Bypass nas regras de segurança normais, usado apenas para o super admin.
-     */
-    @Override
-    public Optional<Pateo> buscarPorIdComZonas(UUID pateoId) {
-        return pateoRepository.findPateoWithZonasById(pateoId);
-    }
 
     /**
-     * Prepara o ViewModel com os detalhes do pátio, incluindo zonas e funcionários.
-     * Gera links mágicos para cada funcionário, se houver tokens válidos.
+     * Prepara o ViewModel para a tela de detalhes do pátio no painel do Super Admin.
+     * Este método é otimizado para evitar o problema N+1 ao buscar os Magic Links.
+     *
+     * @param pateoId O UUID do pátio.
+     * @return Um PateoViewModel preenchido.
+     * @throws ResourceNotFoundException Se o pátio não for encontrado.
      */
     @Override
     public PateoViewModel prepararViewModelDeDetalhes(UUID pateoId) {
+        // 1. Busca o pátio com todas as suas coleções (funcionários e zonas)
         Pateo pateo = pateoRepository.findPateoWithDetailsById(pateoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pátio com ID " + pateoId + " não encontrado."));
 
+        // 2. Busca todos os tokens válidos para todos os funcionários deste pátio
+        List<TokenAcesso> tokensValidos = tokenAcessoRepository
+            .findAllValidTokensByFuncionarioList(pateo.getFuncionarios(), Instant.now());
+
+        // 3. Mapeia os tokens por Funcionario ID para acesso rápido
+        Map<UUID, TokenAcesso> tokenMap = tokensValidos.stream()
+            .collect(Collectors.toMap(
+                token -> token.getFuncionario().getId(), // Chave: ID do Funcionario
+                token -> token,                         // Valor: O objeto TokenAcesso
+                (primeiro, segundo) -> primeiro          // Em caso de duplicata, fica com o primeiro
+            ));
+
+        // 4. Monta os ViewModels
         List<FuncionarioViewModel> funcionariosComLink = pateo.getFuncionarios().stream()
                 .map(funcionario -> {
-                    Optional<String> linkUrl = tokenAcessoRepository
-                            .findFirstByFuncionarioAndUsadoIsFalseAndExpiraEmAfterOrderByCriadoEmDesc(funcionario, Instant.now())
+                    Optional<String> linkUrl = Optional.ofNullable(tokenMap.get(funcionario.getId()))
                             .map(this::buildMagicLinkUrl);
                     return new FuncionarioViewModel(funcionario, linkUrl);
                 }).toList();
@@ -112,9 +137,36 @@ public class PateoServiceImpl implements PateoService {
         return new PateoViewModel(pateo, funcionariosComLink, zonaList);
     }
 
-    /** Constrói a URL do link mágico a partir do token de acesso. */
+    
+    /**
+     * Busca um pátio pelo ID e já carrega suas zonas (visão do Super Admin).
+     * @param pateoId O UUID do pátio.
+     * @return Um Optional contendo o Pateo com suas Zonas.
+     */
+    @Override
+    public Optional<Pateo> buscarPorIdComZonas(UUID pateoId) {
+        return pateoRepository.findPateoWithZonasById(pateoId);
+    }
+
+
+    // Métodos Auxiliares
+
+    /**
+     * Método auxiliar para buscar o Pátio ATIVO associado a um admin logado.
+     * Centraliza a regra de negócio de que um admin deve ter um pátio ativo.
+     */
+    private Pateo getPateoDoAdmin(UsuarioAdmin adminLogado) {
+        return pateoRepository.findAllByGerenciadoPorId(adminLogado.getId())
+                .stream()
+                .filter(pateo -> pateo.getStatus() == Status.ATIVO) 
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("Admin não está associado a nenhum pátio ativo."));
+    }
+
+    /**
+     * Constrói a URL do Magic Link a partir do token de acesso.
+     */
     private String buildMagicLinkUrl(TokenAcesso token) {
         return baseUrl + "/auth/validar-token?valor=" + token.getToken();
     }
-
 }

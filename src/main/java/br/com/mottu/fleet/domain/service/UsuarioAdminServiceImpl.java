@@ -22,7 +22,6 @@ import br.com.mottu.fleet.application.dto.web.AdminComPateoViewModel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +33,7 @@ import java.util.List;
 /**
  * Implementação do serviço que contém as regras de negócio para
  * o gerenciamento de usuários administradores (Super Admins e Admins de Pátio).
+ * Esta classe serve o painel web do Super Admin e a API REST.
  */
 @Service
 public class UsuarioAdminServiceImpl implements UsuarioAdminService {
@@ -46,14 +46,13 @@ public class UsuarioAdminServiceImpl implements UsuarioAdminService {
     private final AuthCodeRepository authCodeRepository;
     private final RefreshTokenRepository refreshTokenRepository;
 
-    @Autowired
     public UsuarioAdminServiceImpl(UsuarioAdminRepository usuarioAdminRepository,
-                                    PateoRepository pateoRepository,
-                                    PasswordEncoder passwordEncoder,
-                                    FuncionarioRepository funcionarioRepository,
-                                    TokenAcessoRepository tokenAcessoRepository,
-                                    AuthCodeRepository authCodeRepository,
-                                    RefreshTokenRepository refreshTokenRepository) {
+                                   PateoRepository pateoRepository,
+                                   PasswordEncoder passwordEncoder,
+                                   FuncionarioRepository funcionarioRepository,
+                                   TokenAcessoRepository tokenAcessoRepository,
+                                   AuthCodeRepository authCodeRepository,
+                                   RefreshTokenRepository refreshTokenRepository) {
         this.usuarioAdminRepository = usuarioAdminRepository;
         this.pateoRepository = pateoRepository;
         this.passwordEncoder = passwordEncoder;
@@ -67,7 +66,7 @@ public class UsuarioAdminServiceImpl implements UsuarioAdminService {
     /**
      * Lista administradores de pátio de forma paginada e com filtro por status.
      * Para cada administrador, busca o nome do pátio que ele gerencia.
-     * @param status O status para filtrar a busca (ATIVO, REMOVIDO, SUSPENSO). null? = ATIVO.
+     * @param status O status para filtrar a busca (ATIVO, REMOVIDO, SUSPENSO). Se nulo, assume ATIVO.
      * @param pageable Objeto contendo as informações de paginação.
      * @return Page de ViewModels, contendo os dados do admin e do seu pátio.
      */
@@ -88,7 +87,6 @@ public class UsuarioAdminServiceImpl implements UsuarioAdminService {
     /**
      * Realiza o "soft delete" de um administrador e de todos os pátios associados a ele.
      * Regra de Negócio: A desativação de um admin implica na desativação em cascata de suas unidades.
-     * O status de ambos é alterado para REMOVIDO.
      * @param id O UUID do administrador a ser desativado.
      * @throws ResourceNotFoundException se o usuário não for encontrado.
      */
@@ -244,6 +242,8 @@ public class UsuarioAdminServiceImpl implements UsuarioAdminService {
         return funcionarioRepository.findAllByPateoIdWithPateo(pateoId);
     }
 
+
+    // Métodos Auxiliares
 
     /**
      * Método auxiliar privado para buscar um admin por ID

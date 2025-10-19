@@ -1,6 +1,7 @@
-package br.com.mottu.fleet.domain.service;
+package br.com.mottu.fleet.infrastructure.service;
 
 import br.com.mottu.fleet.domain.entity.Funcionario;
+import br.com.mottu.fleet.domain.service.NotificationService;
 
 import com.sendgrid.Method;
 import com.sendgrid.Request;
@@ -13,19 +14,22 @@ import com.sendgrid.helpers.mail.objects.Email;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 
 /**
  * Implementação do NotificationService que utiliza a API do SendGrid para enviar e-mails.
- * Esta classe não é a primária (@Primary), sendo destinada para uso como fallback.
+ * Esta classe não é a primária (@Primary), sendo destinada para uso como fallback
+ * quando a notificação via WhatsApp falha.
  */
 @Service
 public class SendGridEmailNotificationServiceImpl implements NotificationService {
 
     private static final Logger log = LoggerFactory.getLogger(SendGridEmailNotificationServiceImpl.class);
+    
     private final SendGrid sendGridClient;
     private final String fromEmail;
 
@@ -35,9 +39,13 @@ public class SendGridEmailNotificationServiceImpl implements NotificationService
         this.fromEmail = fromEmail;
     }
 
+
     /**
      * Implementação do envio de Magic Link via E-mail usando o SendGrid.
-     * Constrói e envia um e-mail contendo a URL de acesso para o funcionário.
+     * Constrói e envia um e-mail transacional contendo a URL de acesso para o funcionário.
+     *
+     * @param funcionario O objeto do funcionário que receberá o e-mail.
+     * @param magicLinkUrl A URL completa do Magic Link a ser enviada.
      */
     @Override
     public void enviarMagicLink(Funcionario funcionario, String magicLinkUrl) {
@@ -58,14 +66,17 @@ public class SendGridEmailNotificationServiceImpl implements NotificationService
 
         Request request = new Request();
         try {
+            // 1. Define a chamada para a API do SendGrid
             request.setMethod(Method.POST);
             request.setEndpoint("mail/send");
             request.setBody(mail.build());
             Response response = sendGridClient.api(request);
             
+            // 2. Loga o resultado da tentativa de envio
             if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
                 log.info("E-mail de fallback enviado com sucesso para: {}. Status: {}", funcionario.getEmail(), response.getStatusCode());
             } else {
+                // Se o SendGrid recusar, loga a falha. Isso aciona o EmailFailureListener.
                 log.error("Falha ao enviar e-mail de fallback para {}. Status: {}. Body: {}",
                         funcionario.getEmail(), response.getStatusCode(), response.getBody());
             }

@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Collection;
+import java.util.List;
 
 
 /**
@@ -54,5 +56,21 @@ public interface TokenAcessoRepository extends JpaRepository<TokenAcesso, UUID> 
     @Transactional
     @Query("DELETE FROM TokenAcesso t WHERE t.funcionario.id = :funcionarioId")
     void deleteAllByFuncionarioId(@Param("funcionarioId") UUID funcionarioId);
+
+
+    /**
+     * Busca todos os tokens de acesso válidos (não usados, não expirados) para
+     * uma coleção de funcionários em uma única query.
+     * Otimizado para evitar o problema N+1.
+     */
+    @Query("SELECT t FROM TokenAcesso t " +
+           "WHERE t.funcionario IN :funcionarios " +
+           "AND t.usado = false " +
+           "AND t.expiraEm > :agora " +
+           "ORDER BY t.criadoEm DESC")
+    List<TokenAcesso> findAllValidTokensByFuncionarioList(
+            @Param("funcionarios") Collection<Funcionario> funcionarios,
+            @Param("agora") Instant agora
+    );
     
 }

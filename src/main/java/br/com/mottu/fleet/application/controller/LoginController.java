@@ -3,6 +3,11 @@ package br.com.mottu.fleet.application.controller;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
+
+/**
+ * Controller MVC público responsável por renderizar a página de login
+ * para administradores de pátio.
+ */
 @Controller
 public class LoginController {
 

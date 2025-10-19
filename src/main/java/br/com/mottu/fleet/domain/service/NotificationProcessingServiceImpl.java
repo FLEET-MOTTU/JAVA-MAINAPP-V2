@@ -15,9 +15,9 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- * Implementação do serviço de processamento assíncrono para status de notificação
- * Consumer para os eventos de status enviados pelo Twilio
- * em segundo plano para não bloquear a resposta do webhook
+ * Serviço central de processamento de status de notificação.
+ * Recebe o status do Twilio (via WhatsappFailureListener) e orquestra a lógica
+ * de fallback, notificando o frontend via WebSocket em cada etapa.
  */
 @Service
 public class NotificationProcessingServiceImpl implements NotificationProcessingService {
@@ -39,14 +39,13 @@ public class NotificationProcessingServiceImpl implements NotificationProcessing
         this.baseUrl = baseUrl;
     }
 
+
     /**
-     * Processa o status de uma mensagem do Twilio
-     * Verifica se o status da mensagem é de falha e, caso seja, aciona o
-     * fallback para enviar o Magic Link por e-mail.
-     *
+     * Processa o status de uma mensagem do Twilio (recebido da fila de falhas).
+     * Este método é chamado pelo WhatsappFailureListener.
      * @param messageSid O ID da mensagem do Twilio (Message SID).
-     * @param messageStatus O status da mensagem (ex: "failed", "undelivered").
-     */    
+     * @param messageStatus O status da mensagem (ex: "failed", "undelivered", "delivered").
+     */
     @Override
     @Transactional
     public void processarStatusDaMensagem(String messageSid, String messageStatus) {
@@ -54,25 +53,25 @@ public class NotificationProcessingServiceImpl implements NotificationProcessing
 
         try {
             TokenAcesso token = null;
-            // 1. TENTA ENCONTRAR O TOKEN PRIMEIRO (com retentativas)
+            // 1 . Tenta encontrar o Token
             for (int i = 0; i < 3; i++) {
                 var tokenOpt = tokenAcessoRepository.findByTwilioMessageSid(messageSid);
                 if (tokenOpt.isPresent()) {
                     token = tokenOpt.get();
                     log.info("Token encontrado na tentativa {} para o SID: {}", i + 1, messageSid);
-                    break; // Sai do loop assim que encontrar
+                    break;
                 }
                 log.warn("Tentativa {}: Token para SID {} ainda não visível. Aguardando 500ms.", i + 1, messageSid);
                 Thread.sleep(500);
             }
 
-            // 2. SE O TOKEN NÃO FOI ENCONTRADO APÓS AS TENTATIVAS, LOGA O ERRO E SAI.
+            // 2. Se, após 3 tentativas, o token ainda não foi encontrado, loga erro crítico e retorna.
             if (token == null) {
                 log.error("FALHA CRÍTICA: Token não encontrado para o SID {} após 3 tentativas. Impossível processar status.", messageSid);
-                return; // Não podemos fazer nada sem o token
+                return;
             }
 
-            // 3. SE O TOKEN FOI ENCONTRADO, AGORA SIM VERIFICAMOS O STATUS E AGIMOS.
+            // 3. Processa o status da mensagem
             Funcionario funcionario = token.getFuncionario();
 
             if ("delivered".equalsIgnoreCase(messageStatus)) {
@@ -91,8 +90,6 @@ public class NotificationProcessingServiceImpl implements NotificationProcessing
 
                 enviarEmailDeFallback(token); 
             } else {
-                // CASO 3 (Opcional): Outros status como 'sent', 'read', etc.
-                // Por enquanto, vamos apenas logar, mas poderíamos enviar um status para o WebSocket se quisesse.
                 log.info("Status intermediário [{}] recebido para SID: {}. Nenhuma ação de fallback necessária.", messageStatus, messageSid);
             }
 
@@ -101,11 +98,14 @@ public class NotificationProcessingServiceImpl implements NotificationProcessing
             log.error("Thread interrompida durante a espera pelo token para o SID: {}", messageSid, e);
         } catch (Exception e) {
             log.error("Erro inesperado ao processar status da mensagem para SID: {}", messageSid, e);
-            // Considerar mover a mensagem para a Dead Letter Queue aqui também, se possível
-            // (exigiria passar o 'context' do listener ou refatorar).
         }
     }
 
+
+    /**
+     * Método auxiliar privado para executar a lógica de envio de e-mail.
+     * @param tokenAcesso O TokenAcesso já carregado com o funcionário.
+     */
     private void enviarEmailDeFallback(TokenAcesso tokenAcesso) {
         Funcionario funcionario = tokenAcesso.getFuncionario(); 
         String magicLinkUrl = baseUrl + "/auth/validar-token?valor=" + tokenAcesso.getToken();

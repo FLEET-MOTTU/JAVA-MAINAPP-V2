@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.hibernate.annotations.CreationTimestamp;
+
 
 /**
  * Entidade que representa o Token de Acesso de uso único (Magic Link).
@@ -25,6 +27,7 @@ public class TokenAcesso {
     @JoinColumn(name = "funcionario_id", nullable = false)
     private Funcionario funcionario;
 
+    @CreationTimestamp
     @Column(name = "criado_em", nullable = false)
     private Instant criadoEm;
 

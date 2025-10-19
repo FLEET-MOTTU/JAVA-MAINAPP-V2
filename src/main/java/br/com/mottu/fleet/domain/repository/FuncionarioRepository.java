@@ -27,6 +27,22 @@ public interface FuncionarioRepository extends JpaRepository<Funcionario, UUID>,
 
 
     /**
+     * Verifica de forma otimizada se um e-mail já existe no banco.
+     * @param email O e-mail a ser verificado.
+     * @return true se o e-mail já existir, false caso contrário.
+     */
+    boolean existsByEmail(String email);
+    
+
+    /**
+     * Verifica de forma otimizada se um telefone já existe no banco.
+     * @param telefone O telefone a ser verificado.
+     * @return true se o telefone já existir, false caso contrário.
+     */
+    boolean existsByTelefone(String telefone);
+
+
+    /**
      * Busca todos os funcionários (Super Admin)
      * a entidade Pateo associada para evitar queries N+1.
      * @return Uma lista de todos os Funcionarios com seus Patios.
