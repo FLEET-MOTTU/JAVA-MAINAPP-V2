@@ -16,9 +16,42 @@
             <div class="card shadow-sm h-100">
                 <div class="card-header">Planta Baixa</div>
                 <div class="card-body text-center">
-                    <img th:if="${viewModel.pateo().plantaBaixaUrl}" th:src="@{${viewModel.pateo().plantaBaixaUrl}}" class="img-fluid" style="max-height: 400px;" alt="Planta Baixa">
+                    
+                    <img th:if="${viewModel.pateo().plantaBaixaUrl}" 
+                         th:src="@{${viewModel.pateo().plantaBaixaUrl}}" 
+                         class="img-fluid" 
+                         style="max-height: 400px;" 
+                         alt="Planta Baixa">
                     <p th:unless="${viewModel.pateo().plantaBaixaUrl}" class="text-muted">Nenhuma planta baixa cadastrada.</p>
-                </div>
+
+                    <hr>
+                    <form th:action="@{/admin/pateos/{id}/upload-planta(id=${viewModel.pateo().id})}" 
+                          method="post" enctype="multipart/form-data" class="mt-3 text-start">
+                        
+                        <div class="mb-3">
+                            <label for="plantaInput" class="form-label">Arquivo da Planta (Imagem)</label>
+                            <input type="file" class="form-control" name="planta" id="plantaInput" accept="image/*" required>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label for="plantaLargura" class="form-label">Largura (px)</label>
+                                <input type="number" class="form-control" name="plantaLargura" id="plantaLargura" 
+                                       th:value="${viewModel.pateo().plantaLargura != null ? viewModel.pateo().plantaLargura : '800'}" required>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label for="plantaAltura" class="form-label">Altura (px)</label>
+                                <input type="number" class="form-control" name="plantaAltura" id="plantaAltura" 
+                                       th:value="${viewModel.pateo().plantaAltura != null ? viewModel.pateo().plantaAltura : '600'}" required>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button class="btn btn-primary" type="submit">Enviar Nova Planta</button>
+                        </div>
+                        <div class="form-text text-center mt-2">Envia uma nova imagem e atualiza as dimensões.</div>
+                    </form>
+                    </div>
             </div>
         </div>
         <div class="col-md-6 mb-4">
@@ -62,28 +95,28 @@
                         </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="funcVM : ${viewModel.funcionariosComLink()}">
-                                <td th:text="${funcVM.funcionario().nome}"></td>
-                                <td th:text="${funcVM.funcionario().telefone}" class="font-monospace"></td>
-                                <td th:text="${funcVM.funcionario().cargo.name()}"></td>
-                                <td>
-                                    <span class="badge"
-                                        th:classappend="${funcVM.funcionario().status.name() == 'ATIVO'} ? 'bg-success' : 'bg-secondary'"
-                                        th:text="${funcVM.funcionario().status.name()}"></span>
-                                </td>
-                                <td class="font-monospace" style="font-size: 0.8rem;">
-                                    <span th:if="${funcVM.magicLinkUrl().isPresent()}" th:text="${funcVM.magicLinkUrl().get()}"></span>
-                                    <span th:if="${funcVM.magicLinkUrl().isEmpty()}" class="text-muted fst-italic">Nenhum link válido</span>
-                                </td>
-                                <td class="text-end">
-                                    <form th:action="@{/admin/pateos/{pateoId}/funcionarios/{id}/gerar-link(pateoId=${viewModel.pateo().id}, id=${funcVM.funcionario().id})}" method="post">
-                                        <button type="submit" class="btn btn-sm btn-outline-success">
-                                            <i class="bi bi-link-45deg"></i> Gerar Novo Link
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                            </tbody>
+                        <tr th:each="funcVM : ${viewModel.funcionariosComLink()}">
+                            <td th:text="${funcVM.funcionario().nome}"></td>
+                            <td th:text="${funcVM.funcionario().telefone}" class="font-monospace"></td>
+                            <td th:text="${funcVM.funcionario().cargo.name()}"></td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${funcVM.funcionario().status.name() == 'ATIVO'} ? 'bg-success' : 'bg-secondary'"
+                                      th:text="${funcVM.funcionario().status.name()}"></span>
+                            </td>
+                            <td class="font-monospace" style="font-size: 0.8rem;">
+                                <span th:if="${funcVM.magicLinkUrl().isPresent()}" th:text="${funcVM.magicLinkUrl().get()}"></span>
+                                <span th:if="${funcVM.magicLinkUrl().isEmpty()}" class="text-muted fst-italic">Nenhum link válido</span>
+                            </td>
+                            <td class="text-end">
+                                <form th:action="@{/admin/pateos/{pateoId}/funcionarios/{id}/gerar-link(pateoId=${viewModel.pateo().id}, id=${funcVM.funcionario().id})}" method="post">
+                                    <button type="submit" class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-link-45deg"></i> Gerar Novo Link
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
                     </table>
                 </div>
             </div>

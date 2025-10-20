@@ -30,4 +30,6 @@ public interface StorageService {
         String uniqueBlobName = UUID.randomUUID().toString() + extension;
         return this.upload(containerName, uniqueBlobName, file.getInputStream(), file.getSize(), file.getContentType());
     }
+
+    String gerarUrlAcessoTemporario(String containerName, String blobName);
 }

@@ -16,6 +16,7 @@ import br.com.mottu.fleet.domain.repository.TokenAcessoRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -24,6 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.io.IOException;
 
 
 /**
@@ -36,13 +38,16 @@ public class PateoServiceImpl implements PateoService {
     private final PateoRepository pateoRepository;
     private final TokenAcessoRepository tokenAcessoRepository;
     private final String baseUrl;
+    private final StorageService storageService;
     
     public PateoServiceImpl(PateoRepository pateoRepository,
                             TokenAcessoRepository tokenAcessoRepository,
+                            StorageService storageService,
                             @Value("${application.base-url}") String baseUrl) {
         this.pateoRepository = pateoRepository;
         this.tokenAcessoRepository = tokenAcessoRepository;
         this.baseUrl = baseUrl;
+        this.storageService = storageService;
     }
 
 
@@ -146,6 +151,40 @@ public class PateoServiceImpl implements PateoService {
     @Override
     public Optional<Pateo> buscarPorIdComZonas(UUID pateoId) {
         return pateoRepository.findPateoWithZonasById(pateoId);
+    }
+
+
+    /**
+     * Atualiza a planta baixa de um pátio.
+     * Esta operação é chamada pelo Super Admin.
+     * @param pateoId O ID do pátio a ser atualizado.
+     * @param arquivoPlanta O novo arquivo de imagem.
+     * @return O Pátio com a URL da planta atualizada.
+     * @throws IOException Se o upload falhar.
+     * @throws BusinessException Se o arquivo estiver vazio.
+     * @throws ResourceNotFoundException Se o pátio não for encontrado.
+     */
+    @Override
+    @Transactional
+    public Pateo atualizarPlantaBaixa(UUID pateoId, MultipartFile arquivoPlanta, Integer largura, Integer altura) throws IOException {
+
+        if (arquivoPlanta == null || arquivoPlanta.isEmpty()) {
+            throw new BusinessException("O arquivo da planta não pode ser vazio.");
+        }
+        if (largura == null || altura == null || largura <= 0 || altura <= 0) {
+            throw new BusinessException("As dimensões (largura e altura) são obrigatórias e devem ser maiores que zero.");
+        }
+
+        Pateo pateo = pateoRepository.findById(pateoId)
+            .orElseThrow(() -> new ResourceNotFoundException("Pátio com ID " + pateoId + " não encontrado."));
+
+        String novaPlantaUrl = storageService.upload("plantas", arquivoPlanta);
+
+        pateo.setPlantaBaixaUrl(novaPlantaUrl);
+        pateo.setPlantaLargura(largura);
+        pateo.setPlantaAltura(altura);
+        
+        return pateoRepository.save(pateo);
     }
 
 

@@ -1,10 +1,8 @@
 package br.com.mottu.fleet.application.controller;
 
-import br.com.mottu.fleet.application.dto.web.OnboardingRequest;
-import br.com.mottu.fleet.application.dto.web.PateoViewModel;
-import br.com.mottu.fleet.application.dto.web.UsuarioAdminUpdateRequest;
-import br.com.mottu.fleet.application.dto.web.AdminComPateoViewModel;
+import br.com.mottu.fleet.application.dto.web.*;
 import br.com.mottu.fleet.domain.entity.Funcionario;
+import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.service.OnboardingService;
 import br.com.mottu.fleet.domain.service.PateoService;
 import br.com.mottu.fleet.domain.service.UsuarioAdminService;
@@ -12,6 +10,7 @@ import br.com.mottu.fleet.infrastructure.service.QueueMonitoringService;
 import br.com.mottu.fleet.domain.service.MagicLinkService;
 import br.com.mottu.fleet.domain.repository.FuncionarioRepository;
 import br.com.mottu.fleet.domain.enums.Status;
+import br.com.mottu.fleet.domain.service.StorageService;
 
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,10 +24,14 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.multipart.MultipartFile;
+
 import org.locationtech.jts.io.WKTWriter;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 
 /**
@@ -48,22 +51,27 @@ public class AdminController {
     private final MagicLinkService magicLinkService;
     private final FuncionarioRepository funcionarioRepository;
     private final QueueMonitoringService queueMonitoringService;
+    private final StorageService storageService;
+
+    @Value("${spring.profiles.active:prod}")
+    private String activeProfile;
 
     public AdminController(OnboardingService onboardingService,
                            UsuarioAdminService usuarioAdminService,
                            PateoService pateoService,
                            MagicLinkService magicLinkService,
                            FuncionarioRepository funcionarioRepository,
-                           QueueMonitoringService queueMonitoringService) {
+                           QueueMonitoringService queueMonitoringService,
+                           StorageService storageService) {
         this.onboardingService = onboardingService;
         this.usuarioAdminService = usuarioAdminService;
         this.pateoService = pateoService;
         this.magicLinkService = magicLinkService;
         this.funcionarioRepository = funcionarioRepository;
         this.queueMonitoringService = queueMonitoringService;
+        this.storageService = storageService;
     }
 
-    // --- SEÇÃO: DASHBOARD E ONBOARDING ---
 
     /**
      * Exibe o dashboard principal, que contém a lista de pátios ativos.
@@ -211,9 +219,21 @@ public class AdminController {
     @GetMapping("/pateos/{pateoId}")
     public String exibirDetalhesPateo(@PathVariable UUID pateoId, Model model, HttpServletRequest request) {
         model.addAttribute("requestURI", request.getRequestURI());
+        
         PateoViewModel viewModel = pateoService.prepararViewModelDeDetalhes(pateoId);
+        Pateo pateo = viewModel.pateo();
+
+        String urlPlantaAcessivel = pateo.getPlantaBaixaUrl(); // Pega a URL base
+        
+        if (!"dev".equals(activeProfile) && urlPlantaAcessivel != null && !urlPlantaAcessivel.isBlank()) {
+            String blobName = urlPlantaAcessivel.substring(urlPlantaAcessivel.lastIndexOf("/") + 1);
+            urlPlantaAcessivel = storageService.gerarUrlAcessoTemporario("plantas", blobName);            
+            pateo.setPlantaBaixaUrl(urlPlantaAcessivel);
+        }
+        
         model.addAttribute("viewModel", viewModel);
         model.addAttribute("wktWriter", wktWriter);
+
         return "admin/detalhes-pateo";
     }
 
@@ -226,18 +246,31 @@ public class AdminController {
      */
     @GetMapping("/funcionarios")
     public String listarTodosFuncionarios(@RequestParam(required = false) UUID pateoId, Model model, HttpServletRequest request) {
+
         List<Funcionario> funcionarios;
-        
         if (pateoId != null) {
             funcionarios = usuarioAdminService.listarTodosFuncionariosPorPateoId(pateoId);
         } else {
             funcionarios = usuarioAdminService.listarTodosFuncionariosComPateo();
         }
         
-        model.addAttribute("funcionarios", funcionarios);
-        model.addAttribute("pateos", pateoService.listarTodosAtivos()); // Para o <select> do filtro
+        List<FuncionarioMestreViewModel> funcionariosVM = funcionarios.stream()
+            .map(func -> {
+                String urlFotoAcessivel = func.getFotoUrl();
+
+                if (!"dev".equals(activeProfile) && urlFotoAcessivel != null && !urlFotoAcessivel.isBlank()) {
+                    String blobName = urlFotoAcessivel.substring(urlFotoAcessivel.lastIndexOf("/") + 1);
+                    urlFotoAcessivel = storageService.gerarUrlAcessoTemporario("fotos", blobName);
+                }
+
+                return new FuncionarioMestreViewModel(func, urlFotoAcessivel);
+            }).collect(Collectors.toList());
+
+        model.addAttribute("funcionariosVM", funcionariosVM);
+        model.addAttribute("pateos", pateoService.listarTodosAtivos());
         model.addAttribute("filtroPateoId", pateoId);
         model.addAttribute("requestURI", request.getRequestURI());
+
         return "admin/lista-funcionarios-mestre";
     }
 
@@ -291,6 +324,30 @@ public class AdminController {
         model.addAttribute("queueStats", queueMonitoringService.getQueueStats());
         model.addAttribute("requestURI", request.getRequestURI());
         return "admin/monitor-filas";
+    }
+
+
+    /**
+     * Processa o upload de uma nova imagem de planta baixa para um pátio.
+     * @param pateoId O ID do pátio que receberá a nova planta.
+     * @param arquivoPlanta O arquivo de imagem enviado via formulário.
+     * @param redirectAttributes Para exibir a mensagem de sucesso/erro.
+     * @return Redireciona de volta para a página de detalhes do pátio.
+     */
+    @PostMapping("/pateos/{pateoId}/upload-planta")
+    public String processarUploadPlanta(@PathVariable UUID pateoId,
+                                        @RequestParam("planta") MultipartFile arquivoPlanta,
+                                        @RequestParam("plantaLargura") Integer plantaLargura,
+                                        @RequestParam("plantaAltura") Integer plantaAltura,
+                                        RedirectAttributes redirectAttributes) {
+        try {
+            pateoService.atualizarPlantaBaixa(pateoId, arquivoPlanta, plantaLargura, plantaAltura);
+            redirectAttributes.addFlashAttribute("sucessoMessage", "Planta baixa do pátio atualizada com sucesso!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Erro ao atualizar planta: " + e.getMessage());
+        }
+        
+        return "redirect:/admin/pateos/" + pateoId;
     }
     
 }

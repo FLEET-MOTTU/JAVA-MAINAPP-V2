@@ -11,6 +11,7 @@ import br.com.mottu.fleet.domain.enums.Cargo;
 import br.com.mottu.fleet.domain.enums.Status;
 import br.com.mottu.fleet.domain.service.FuncionarioService;
 import br.com.mottu.fleet.domain.service.MagicLinkService;
+import br.com.mottu.fleet.domain.service.StorageService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,10 +33,10 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import org.springframework.http.MediaType;
 
 import java.net.URI;
 import java.util.List;
@@ -61,15 +62,21 @@ public class FuncionarioController {
     private final MagicLinkService magicLinkService;
     private final Validator validator;
     private final ObjectMapper objectMapper;
+    private final StorageService storageService;
+
+    @Value("${spring.profiles.active:prod}")
+    private String activeProfile;
 
     public FuncionarioController(FuncionarioService funcionarioService,
                                    MagicLinkService magicLinkService,
                                    Validator validator,
-                                   ObjectMapper objectMapper) {
+                                   ObjectMapper objectMapper,
+                                   StorageService storageService) {
         this.funcionarioService = funcionarioService;
         this.magicLinkService = magicLinkService;
         this.validator = validator;
         this.objectMapper = objectMapper;
+        this.storageService = storageService;
     }
 
 
@@ -282,17 +289,25 @@ public class FuncionarioController {
 
 
     /**
-     * Método auxiliar privado para converter a entidade Funcionario em uma DTO de resposta.
-     * @param funcionario A entidade vinda do serviço.
-     * @return A DTO de resposta da API.
+     * Método auxiliar para converter a entidade Funcionario em uma DTO de resposta.
+     * Sensível ao perfil (dev vs prod) para gerar a URL da foto.
      */
     private FuncionarioResponse toFuncionarioResponse(Funcionario funcionario) {
+        
+        String urlAcessivel = funcionario.getFotoUrl();
+
+        if (!"dev".equals(activeProfile) && urlAcessivel != null && !urlAcessivel.isBlank()) {
+            String blobName = urlAcessivel.substring(urlAcessivel.lastIndexOf("/") + 1);
+            urlAcessivel = storageService.gerarUrlAcessoTemporario("fotos", blobName);
+        }
+        
         return new FuncionarioResponse(
-            funcionario.getId(),
-            funcionario.getNome(),
-            funcionario.getTelefone(),
-            funcionario.getEmail(),
-            funcionario.getFotoUrl()
+                funcionario.getId(),
+                funcionario.getNome(),
+                funcionario.getTelefone(),
+                funcionario.getEmail(),
+                urlAcessivel
         );
     }
+
 }

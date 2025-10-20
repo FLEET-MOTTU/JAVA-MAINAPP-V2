@@ -20,7 +20,7 @@
                             th:value="${pateo.id}"
                             th:text="${pateo.nome}"
                             th:selected="${pateo.id.equals(filtroPateoId)}">
-                        </option>
+                    </option>
                 </select>
             </form>
         </div>
@@ -31,6 +31,7 @@
             <table class="table table-hover align-middle">
                 <thead class="table-dark">
                 <tr>
+                    <th>Foto</th> 
                     <th>ID do Funcionário</th>
                     <th>Nome</th>
                     <th>Email</th>
@@ -41,19 +42,28 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="func : ${funcionarios}">
-                    <td><small class="text-muted font-monospace" th:text="${func.id}"></small></td>
-                    <td th:text="${func.nome}"></td>
-                    <td th:text="${func.email}"></td>
-                    <td class="font-monospace" th:text="${func.telefone}"></td>
-                    <td th:text="${func.pateo.nome}"></td>
+                <tr th:each="vm : ${funcionariosVM}">
+                    
+                    <td>
+                        <img th:if="${vm.fotoUrlAcessivel}" th:src="${vm.fotoUrlAcessivel}" 
+                             class="img-thumbnail" 
+                             style="width: 50px; height: 50px; object-fit: cover; border-radius: 50%;" 
+                             alt="Foto">
+                        <span th:unless="${vm.fotoUrlAcessivel}" class="text-muted" style="font-size: 0.8rem;">(Sem foto)</span>
+                    </td>
+                    
+                    <td><small class="text-muted font-monospace" th:text="${vm.funcionario.id}"></small></td>
+                    <td th:text="${vm.funcionario.nome}"></td>
+                    <td th:text="${vm.funcionario.email}"></td>
+                    <td class="font-monospace" th:text="${vm.funcionario.telefone}"></td>
+                    <td th:text="${vm.funcionario.pateo.nome}"></td>
                     <td>
                         <span class="badge"
-                              th:classappend="${func.status.name() == 'ATIVO'} ? 'bg-success' : (${func.status.name() == 'SUSPENSO'} ? 'bg-warning text-dark' : 'bg-danger')"
-                              th:text="${func.status.name()}"></span>
+                              th:classappend="${vm.funcionario.status.name() == 'ATIVO'} ? 'bg-success' : (${vm.funcionario.status.name() == 'SUSPENSO'} ? 'bg-warning text-dark' : 'bg-danger')"
+                              th:text="${vm.funcionario.status.name()}"></span>
                     </td>
                     <td class="text-end">
-                        <form th:action="@{/admin/funcionarios/{id}/delete-hard(id=${func.id})}" method="post" class="d-inline"
+                        <form th:action="@{/admin/funcionarios/{id}/delete-hard(id=${vm.funcionario.id})}" method="post" class="d-inline"
                               onsubmit="return confirm('ATENÇÃO! Isso vai apagar o funcionário PERMANENTEMENTE do banco de dados (hard delete). Esta ação não pode ser desfeita e pode afetar registros históricos. Deseja continuar?');">
                             <button type="submit" class="btn btn-sm btn-danger" title="Excluir Permanentemente">
                                 <i class="bi bi-trash-fill"></i> Hard Delete
@@ -61,8 +71,8 @@
                         </form>
                     </td>
                 </tr>
-                <tr th:if="${#lists.isEmpty(funcionarios)}">
-                    <td colspan="7" class="text-center p-4">Nenhum funcionário encontrado para este filtro.</td>
+                <tr th:if="${#lists.isEmpty(funcionariosVM)}">
+                    <td colspan="8" class="text-center p-4">Nenhum funcionário encontrado para este filtro.</td>
                 </tr>
                 </tbody>
             </table>

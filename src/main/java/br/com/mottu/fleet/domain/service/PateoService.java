@@ -5,9 +5,12 @@ import br.com.mottu.fleet.application.dto.web.PateoViewModel;
 import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.io.IOException;
 
 public interface PateoService {
     List<Pateo> listarTodosAtivos();
@@ -15,4 +18,5 @@ public interface PateoService {
     Pateo buscarDetalhesDoPateo(UUID pateoId, UsuarioAdmin adminLogado);
     Optional<Pateo> buscarPorIdComZonas(UUID pateoId);
     PateoViewModel prepararViewModelDeDetalhes(UUID pateoId);
+    Pateo atualizarPlantaBaixa(UUID pateoId, MultipartFile arquivoPlanta, Integer largura, Integer altura) throws IOException;
 }

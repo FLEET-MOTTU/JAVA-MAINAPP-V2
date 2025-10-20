@@ -1,4 +1,4 @@
-# F.L.E.E.T. - Sistema de Gerenciamento de Pátio Mottu
+# F.L.E.E.T. - Sistema de Gerenciamento de Pátio Mottu V2
 
 ![Java](https://img.shields.io/badge/Java-17-blue)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen)
