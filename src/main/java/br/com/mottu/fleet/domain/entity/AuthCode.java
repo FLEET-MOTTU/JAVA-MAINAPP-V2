@@ -7,6 +7,12 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
+
+/**
+ * Entidade que representa um Código de Autorização de curta duração (AuthCode).
+ * Este é o "ticket de troca" de 60 segundos usado na etapa final do
+ * fluxo do Magic Link para trocar por um par de tokens JWT.
+ */
 @Entity
 @Table(name = "auth_code")
 public class AuthCode {

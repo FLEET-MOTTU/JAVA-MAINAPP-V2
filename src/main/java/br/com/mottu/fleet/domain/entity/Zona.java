@@ -1,11 +1,18 @@
 package br.com.mottu.fleet.domain.entity;
 
 import jakarta.persistence.*;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.locationtech.jts.geom.Polygon;
+
 import java.time.Instant;
 import java.util.UUID;
 
+
+/**
+ * Entidade que representa uma Zona de depósito das motos dentro de um Pátio.
+ * Armazena o nome da zona e sua definição geométrica (Polígono).
+ */
 @Entity
 @Table(name = "zona")
 public class Zona {
@@ -25,6 +32,7 @@ public class Zona {
     @JoinColumn(name = "criado_por_id", nullable = false)
     private UsuarioAdmin criadoPor;
 
+    // Define a coluna como do tipo GEOMETRY, sem projeção espacial (SRID 0)
     @Column(columnDefinition = "GEOMETRY NOT NULL SRID 0")
     private Polygon coordenadas;
 
@@ -33,6 +41,7 @@ public class Zona {
     private Instant createdAt;
 
     public Zona() {}
+    
 
     public UUID getId() { return id; }
     public String getNome() { return nome; }

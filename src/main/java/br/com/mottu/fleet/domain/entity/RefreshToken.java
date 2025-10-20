@@ -7,6 +7,12 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
+
+/**
+ * Entidade que representa um Refresh Token de longa duração.
+ * É usado pelo app do funcionário para obter um novo Access Token (JWT)
+ * quando o antigo expirar, permitindo uma "sessão permanente" do app de funcionário.
+ */
 @Entity
 @Table(name = "refresh_token")
 public class RefreshToken {
@@ -28,6 +34,7 @@ public class RefreshToken {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+    
 
     public UUID getId() { return id; }
     public String getToken() { return token; }

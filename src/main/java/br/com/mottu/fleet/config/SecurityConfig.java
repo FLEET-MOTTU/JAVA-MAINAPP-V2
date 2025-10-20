@@ -20,6 +20,12 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+
+/**
+ * Configuração principal de segurança da aplicação, utilizando Spring Security.
+ * Define múltiplas cadeias de filtros para separar a segurança da API REST (stateless)
+ * da segurança do painel web (stateful).
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -32,22 +38,37 @@ public class SecurityConfig {
     }
 
 
-    // BEANS GERAIS
+    /**
+     * Define o codificador de senhas padrão para a aplicação.
+     * @return Uma instância do BCryptPasswordEncoder.
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+
+    /**
+     * Expõe o AuthenticationManager do Spring como um Bean para ser usado
+     * nos controllers de autenticação.
+     * @param config A configuração de autenticação do Spring.
+     * @return O AuthenticationManager padrão.
+     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
+
+    /**
+     * Configura as regras de CORS.
+     * @return A fonte de configuração do CORS.
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // TO-DO: LEMBRAR DE TROCAR ISSO EM PROD
-        configuration.setAllowedOrigins(List.of("*"));
+        // TODO: Trocar "*" pela URL exata do frontend.
+        configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
@@ -56,18 +77,20 @@ public class SecurityConfig {
         return source;
     }
 
-    // REGRAS
 
     /**
-     * Regra 1: Segurança da API (Stateless com JWT).
-     * Processada com prioridade 1 para todas as rotas que começam com "/api/".
+     * Define a cadeia de filtros de segurança para a API REST (Stateless).
+     * Esta cadeia tem prioridade 1 e se aplica a todas as rotas sob "/api/**".
+     *
+     * @param http O objeto HttpSecurity para configurar a segurança.
+     * @return A SecurityFilterChain configurada.
      */
     @Bean
     @Order(1)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
             .securityMatcher("/api/**")
-            .csrf(AbstractHttpConfigurer::disable)
+            .csrf(AbstractHttpConfigurer::disable) // Desabilita CSRF, pq a API é stateless e usa JWT
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(
                     "/api/auth/login",
@@ -82,31 +105,40 @@ public class SecurityConfig {
         return http.build();
     }
 
+
     /**
-     * Regra 2: Segurança do Painel Web (Stateful com Sessão).
-     * Processada com prioridade 2 para todas as outras rotas.
+     * Define a cadeia de filtros de segurança para o Painel Web (Stateful).
+     * Esta cadeia tem prioridade 2 e se aplica a todas as outras rotas.
+     *
+     * @param http O objeto HttpSecurity para configurar a segurança.
+     * @return A SecurityFilterChain configurada.
      */
     @Bean
     @Order(2)
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/css/**", "/js/**", "/error").permitAll()
-                        .requestMatchers("/login", "/auth/validar-token").permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-resources/**").permitAll()
-                        .requestMatchers("/admin/**").hasRole("SUPER_ADMIN")
-                        .anyRequest().authenticated()
-                )
-                .formLogin(form -> form
-                        .loginPage("/login")
-                        .defaultSuccessUrl("/admin/dashboard", true)
-                        .permitAll()
-                )
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login?logout")
-                );
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf
+                // Desabilita o CSRF especificamente para a rota de webhooks
+                .ignoringRequestMatchers("/ws/**")
+            )
+            .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers("/ws/**").permitAll()
+                .requestMatchers("/css/**", "/js/**", "/error").permitAll()
+                .requestMatchers("/login", "/auth/validar-token", "/ws/**").permitAll()
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-resources/**").permitAll()
+                .requestMatchers("/admin/**").hasRole("SUPER_ADMIN")
+                .anyRequest().authenticated()
+            )
+            .formLogin(form -> form
+                .loginPage("/login")
+                .defaultSuccessUrl("/admin/dashboard", true)
+                .permitAll()
+            )
+            .logout(logout -> logout
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/login?logout")
+            );
 
         return http.build();
     }

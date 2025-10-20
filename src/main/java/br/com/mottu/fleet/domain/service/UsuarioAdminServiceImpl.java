@@ -1,9 +1,14 @@
 package br.com.mottu.fleet.domain.service;
 
+import br.com.mottu.fleet.domain.entity.Funcionario;
 import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 import br.com.mottu.fleet.domain.repository.UsuarioAdminRepository;
+import br.com.mottu.fleet.domain.repository.AuthCodeRepository;
+import br.com.mottu.fleet.domain.repository.FuncionarioRepository;
 import br.com.mottu.fleet.domain.repository.PateoRepository;
+import br.com.mottu.fleet.domain.repository.RefreshTokenRepository;
+import br.com.mottu.fleet.domain.repository.TokenAcessoRepository;
 import br.com.mottu.fleet.domain.enums.Role;
 import br.com.mottu.fleet.domain.enums.Status;
 import br.com.mottu.fleet.domain.exception.BusinessException;
@@ -17,17 +22,18 @@ import br.com.mottu.fleet.application.dto.web.AdminComPateoViewModel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 import java.util.Optional;
+import java.util.List;
 
 
 /**
  * Implementação do serviço que contém as regras de negócio para
  * o gerenciamento de usuários administradores (Super Admins e Admins de Pátio).
+ * Esta classe serve o painel web do Super Admin e a API REST.
  */
 @Service
 public class UsuarioAdminServiceImpl implements UsuarioAdminService {
@@ -35,21 +41,32 @@ public class UsuarioAdminServiceImpl implements UsuarioAdminService {
     private final UsuarioAdminRepository usuarioAdminRepository;
     private final PateoRepository pateoRepository;
     private final PasswordEncoder passwordEncoder;
+    private final FuncionarioRepository funcionarioRepository;
+    private final TokenAcessoRepository tokenAcessoRepository;
+    private final AuthCodeRepository authCodeRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
 
-    @Autowired
     public UsuarioAdminServiceImpl(UsuarioAdminRepository usuarioAdminRepository,
                                    PateoRepository pateoRepository,
-                                   PasswordEncoder passwordEncoder) {
+                                   PasswordEncoder passwordEncoder,
+                                   FuncionarioRepository funcionarioRepository,
+                                   TokenAcessoRepository tokenAcessoRepository,
+                                   AuthCodeRepository authCodeRepository,
+                                   RefreshTokenRepository refreshTokenRepository) {
         this.usuarioAdminRepository = usuarioAdminRepository;
         this.pateoRepository = pateoRepository;
         this.passwordEncoder = passwordEncoder;
+        this.funcionarioRepository = funcionarioRepository;
+        this.tokenAcessoRepository = tokenAcessoRepository;
+        this.authCodeRepository = authCodeRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
     }
     
 
     /**
      * Lista administradores de pátio de forma paginada e com filtro por status.
      * Para cada administrador, busca o nome do pátio que ele gerencia.
-     * @param status O status para filtrar a busca (ATIVO, REMOVIDO, SUSPENSO). null? = ATIVO.
+     * @param status O status para filtrar a busca (ATIVO, REMOVIDO, SUSPENSO). Se nulo, assume ATIVO.
      * @param pageable Objeto contendo as informações de paginação.
      * @return Page de ViewModels, contendo os dados do admin e do seu pátio.
      */
@@ -70,7 +87,6 @@ public class UsuarioAdminServiceImpl implements UsuarioAdminService {
     /**
      * Realiza o "soft delete" de um administrador e de todos os pátios associados a ele.
      * Regra de Negócio: A desativação de um admin implica na desativação em cascata de suas unidades.
-     * O status de ambos é alterado para REMOVIDO.
      * @param id O UUID do administrador a ser desativado.
      * @throws ResourceNotFoundException se o usuário não for encontrado.
      */
@@ -183,6 +199,51 @@ public class UsuarioAdminServiceImpl implements UsuarioAdminService {
         });
     }
 
+
+    /**
+     * Realiza o HARD DELETE de um funcionário e todos os seus tokens associados.
+     * Esta é uma operação de Super Admin e não deve ser exposta na API pública.
+     * @param id O UUID do funcionário a ser deletado.
+     */
+    @Override
+    @Transactional
+    public void deletarFuncionarioPermanentemente(UUID id) {
+        if (!funcionarioRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Funcionário com ID " + id + " não encontrado.");
+        }
+
+        // 1. Limpa os tokens associados (por causa das Foreign Keys)
+        tokenAcessoRepository.deleteAllByFuncionarioId(id);
+        authCodeRepository.deleteAllByFuncionarioId(id);
+        refreshTokenRepository.deleteAllByFuncionarioId(id);
+
+        // 2. Agora o Hard Delete
+        funcionarioRepository.deleteById(id);
+    }
+
+
+    /**
+     * Lista TODOS os funcionários de TODOS os pátios (visão de Super Admin).
+     * @return Lista de funcionários com dados do pátio já carregados.
+     */
+    @Override
+    public List<Funcionario> listarTodosFuncionariosComPateo() {
+        return funcionarioRepository.findAllWithPateo();
+    }
+
+
+    /**
+     * Lista TODOS os funcionários de UM pátio específico (visão de Super Admin).
+     * @param pateoId O UUID do pátio para filtrar.
+     * @return Lista de funcionários daquele pátio.
+     */
+    @Override
+    public List<Funcionario> listarTodosFuncionariosPorPateoId(UUID pateoId) {
+        return funcionarioRepository.findAllByPateoIdWithPateo(pateoId);
+    }
+
+
+    // Métodos Auxiliares
 
     /**
      * Método auxiliar privado para buscar um admin por ID

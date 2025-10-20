@@ -11,8 +11,9 @@ public interface StorageService {
      * Método genérico para upload. Recebe os dados brutos do arquivo.
      * @return A URL pública do arquivo após o upload.
      */
-    String upload(String containerName, String blobName, InputStream data, long length);
+    String upload(String containerName, String blobName, InputStream data, long length, String contentType);
 
+    
     /**
      * Método de conveniência para uploads vindos de formulários web.
      * Ele extrai os dados do MultipartFile e chama o método principal.
@@ -27,6 +28,8 @@ public interface StorageService {
         }
 
         String uniqueBlobName = UUID.randomUUID().toString() + extension;
-        return this.upload(containerName, uniqueBlobName, file.getInputStream(), file.getSize());
+        return this.upload(containerName, uniqueBlobName, file.getInputStream(), file.getSize(), file.getContentType());
     }
+
+    String gerarUrlAcessoTemporario(String containerName, String blobName);
 }

@@ -41,6 +41,11 @@ public class GlobalExceptionHandler {
     private final String deepLinkBaseUrl;
     private final String deepLinkErrorPath;
 
+    /**
+     * Construtor que injeta as propriedades de configuração para o fluxo de deep link.
+     * @param deepLinkBaseUrl URL base do deep link do app mobile (ex: fleetapp://).
+     * @param deepLinkErrorPath Caminho para a tela de erro no deep link (ex: login-error).
+     */
     public GlobalExceptionHandler(
             @Value("${application.deeplink.base-url}") String deepLinkBaseUrl,
             @Value("${application.deeplink.login-error-path}") String deepLinkErrorPath) {
@@ -48,9 +53,15 @@ public class GlobalExceptionHandler {
         this.deepLinkErrorPath = deepLinkErrorPath;
     }
 
+
     /**
-     * Handler específico para o fluxo de onboarding via Thymeleaf.
-     * Captura o erro de email duplicado e redireciona para o formulário.
+     * Handler para o fluxo de onboarding do Super Admin (Thymeleaf).
+     * Captura o erro de email duplicado e redireciona o usuário de volta ao formulário
+     * com uma mensagem de erro.
+     *
+     * @param ex A exceção capturada.
+     * @param redirectAttributes Usado para passar a mensagem de erro para a página de redirect.
+     * @return Uma string de redirecionamento para a view do formulário de onboarding.
      */
     @ExceptionHandler(EmailAlreadyExistsException.class)
     public String handleEmailAlreadyExistsForWeb(EmailAlreadyExistsException ex, RedirectAttributes redirectAttributes) {
@@ -58,15 +69,23 @@ public class GlobalExceptionHandler {
         return "redirect:/admin/onboarding/novo";
     }
     
+
     /**
-     * Handler unificado para exceções de regra de negócio, validação ou recursos não encontrados.
-     * Ele inspeciona a URI da requisição para decidir a resposta apropriada.
+     * Handler unificado e ciente do contexto para exceções comuns de negócio e segurança.
+     * Inspeciona a URI da requisição para decidir a resposta apropriada,
+     * tratando 3 contextos diferentes: Magic Link, Painel Web e API REST.
+     *
+     * @param ex A exceção de runtime capturada.
+     * @param request A requisição HTTP para determinar a rota.
+     * @param redirectAttributes Usado para redirecionamentos no painel web.
+     * @return Um objeto de resposta (RedirectView, String de redirect, or ResponseEntity).
      */
     @ExceptionHandler({ResourceNotFoundException.class, InvalidTokenException.class, BusinessException.class, SecurityException.class})
     public Object handleContextAwareExceptions(RuntimeException ex, HttpServletRequest request, RedirectAttributes redirectAttributes) {
         String requestUri = request.getRequestURI();
 
-        // Erro no fluxo de validação do Magic Link eedireciona para o deep link do app
+        // Contexto 1: Falha no fluxo de validação do Magic Link (app mobile).
+        // Resposta: Redireciona o navegador para o deep link de erro do app.
         if ("/auth/validar-token".equals(requestUri)) {
             String encodedMessage = URLEncoder.encode(ex.getMessage(), StandardCharsets.UTF_8);
             String errorUrl = UriComponentsBuilder.fromUriString(deepLinkBaseUrl + deepLinkErrorPath)
@@ -75,14 +94,16 @@ public class GlobalExceptionHandler {
             return new RedirectView(errorUrl);
         }
 
-        // Erro no Painel Web (qualquer rota que NÃO seja /api/) redireciona para a página anterior
+        // Contexto 2: Erro no Painel Web do Super Admin (Thymeleaf).
+        // Resposta: Redireciona o usuário para a página anterior com uma mensagem de erro.
         if (!requestUri.startsWith("/api/")) {
             redirectAttributes.addFlashAttribute("errorMessage", "Erro: " + ex.getMessage());
             String referer = request.getHeader("Referer");
             return "redirect:" + (referer != null ? referer : "/admin/dashboard");
         }
         
-        // Erro na API REST retorna uma resposta JSON
+        // Contexto 3: Erro na API REST (chamada pelo app do Admin de Pátio).
+        // Resposta: Monta um JSON de erro padronizado (ResponseEntity).
         HttpStatus status;
         String error;
 
@@ -100,32 +121,52 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(ex, status, error, request);
     }
     
+
     /**
-     * Handler específico para falhas de autenticação na API (usuário/senha inválidos).
-     * Retorna um status 401 Unauthorized com uma mensagem clara.
+     * Handler para falhas de autenticação na API (login e senha inválidos).
+     * Retorna um status 401 Unauthorized com uma mensagem genérica por segurança.
+     *
+     * @param request A requisição HTTP.
+     * @return Um ResponseEntity com status 401 e corpo de erro padronizado.
      */
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(HttpServletRequest request) {
-        String mensagem = "Usuário inexistente ou senha inválida";
+        String mensagem = "Verifique as credenciais e tente novamente.";
         return buildErrorResponse(new RuntimeException(mensagem), HttpStatus.UNAUTHORIZED, "Não Autorizado", request);
     }
 
+
     /**
-     * Handler para erros inesperados que ocorrem na API.
+     * Handler "pega-tudo" para exceções inesperadas (ex: NullPointerException).
+     * Diferencia entre erros na API e erros no Painel Web.
+     *
+     * @param ex A exceção genérica capturada.
+     * @param request A requisição HTTP.
+     * @return Um ResponseEntity (API) ou relança a exceção (Web).
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleAllApiExceptions(Exception ex, HttpServletRequest request) {
+
+        // Se o erro ocorreu em uma rota da API, loga o stack trace completo
+        // e retorna um JSON de erro 500.
         if (request.getRequestURI().startsWith("/api/")) {
             log.error("Erro inesperado na API na rota {}: {}", request.getRequestURI(), ex.getMessage(), ex);
             return buildErrorResponse(ex, HttpStatus.INTERNAL_SERVER_ERROR, "Erro Interno do Servidor", request);
         }
-        // Se não for uma rota da API, relança a exceção para o Spring tratar e mostrar a Whitelabel Error Page
+
+        // Se o erro foi no painel web, relança a exceção.
+        // Spring Boot captura e mostra "Whitelabel Error Page" padrão.
         throw new RuntimeException(ex);
     }
 
+
     /**
-     * Handler para exceções de validação de DTOs (@Valid).
-     * Captura os erros, formata uma mensagem clara e retorna um status 400 Bad Request.
+     * Handler para exceções de validação de DTOs anotadas com @Valid (ex: @RequestBody).
+     * Formata os erros de campo em uma string e retorna 400 Bad Request.
+     *
+     * @param ex A exceção capturada.
+     * @param request A requisição HTTP.
+     * @return Um ResponseEntity com status 400 e os erros de validação.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex, HttpServletRequest request) {
@@ -137,9 +178,14 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(new RuntimeException(mensagem), HttpStatus.BAD_REQUEST, "Requisição Inválida", request);
     }
 
+
     /**
-     * Handler para erros de integridade do banco de dados, como violações de chaves únicas.
-     * Retorna um status 409 Conflict.
+     * Handler para erros de integridade do banco de dados (ex: violação de constraint 'UNIQUE').
+     * Retorna um status 409 Conflict com uma mensagem genérica para não expor detalhes do schema.
+     *
+     * @param ex A exceção capturada.
+     * @param request A requisição HTTP.
+     * @return Um ResponseEntity com status 409.
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
@@ -147,9 +193,14 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(new RuntimeException(mensagem, ex), HttpStatus.CONFLICT, "Conflito de Dados", request);
     }
 
+
     /**
-     * Handler para exceções de validação lançadas manualmente (ex: @RequestPart com JSON).
-     * Formata os erros e retorna um status 400 Bad Request.
+     * Handler para exceções de validação lançadas manualmente (ex: no controller com @RequestPart).
+     * Formata os erros de campo e retorna 400 Bad Request.
+     *
+     * @param ex A exceção capturada.
+     * @param request A requisição HTTP.
+     * @return Um ResponseEntity com status 400.
      */
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
@@ -161,6 +212,15 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(new RuntimeException(mensagem, ex), HttpStatus.BAD_REQUEST, "Requisição Inválida", request);
     }
 
+
+    /**
+     * Método auxiliar para construir o DTO de resposta de erro padronizado.
+     * @param ex A exceção original.
+     * @param status O HttpStatus da resposta.
+     * @param error O título do erro (ex: "Não Autorizado").
+     * @param request A requisição original para obter o path.
+     * @return Um ResponseEntity preenchido.
+     */
     private ResponseEntity<ErrorResponse> buildErrorResponse(Exception ex, HttpStatus status, String error, HttpServletRequest request) {
         ErrorResponse errorResponse = new ErrorResponse(
                 Instant.now(),

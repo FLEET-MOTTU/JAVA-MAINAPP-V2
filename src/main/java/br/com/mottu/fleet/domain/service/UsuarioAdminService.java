@@ -1,5 +1,6 @@
 package br.com.mottu.fleet.domain.service;
 
+import br.com.mottu.fleet.domain.entity.Funcionario;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 import br.com.mottu.fleet.domain.enums.Status;
 import br.com.mottu.fleet.application.dto.api.PasswordChangeRequest;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.UUID;
 import java.util.Optional;
+import java.util.List;
 
 public interface UsuarioAdminService {
     Page<AdminComPateoViewModel> listarAdminsDePateoPaginado(Status status, Pageable pageable);
@@ -21,4 +23,7 @@ public interface UsuarioAdminService {
     UsuarioAdmin criarAdminDePateo(OnboardingRequest request);
     void alterarSenha(UsuarioAdmin adminLogado, PasswordChangeRequest request);
     void reativarPorId(UUID id);
+    void deletarFuncionarioPermanentemente(UUID id);
+    List<Funcionario> listarTodosFuncionariosComPateo();
+    List<Funcionario> listarTodosFuncionariosPorPateoId(UUID pateoId);
 }

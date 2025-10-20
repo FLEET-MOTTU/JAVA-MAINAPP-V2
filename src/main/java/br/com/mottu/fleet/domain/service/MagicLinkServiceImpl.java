@@ -27,6 +27,12 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
+
+/**
+ * Implementação do serviço de domínio que gerencia todo o ciclo de vida
+ * da autenticação por Magic Link, desde a criação do link até a
+ * troca final por tokens de acesso.
+ */
 @Service
 public class MagicLinkServiceImpl implements MagicLinkService {
 
@@ -56,10 +62,11 @@ public class MagicLinkServiceImpl implements MagicLinkService {
         this.refreshTokenRepository = refreshTokenRepository;
         this.baseUrl = baseUrl;
     }
+    
 
     /**
-     * Cria um novo token de acesso único para um funcionário, salva no banco e retorna a URL completa do Magic Link.
-     * Regra de Negócio: O token gerado tem validade de 24 horas.
+     * Cria um novo token de acesso único (TokenAcesso) para um funcionário e o salva no banco.
+     * Este é o método base para gerar qualquer Magic Link.
      *
      * @param funcionario O funcionário para o qual o link será gerado.
      * @return A String contendo a URL completa do Magic Link.
@@ -71,7 +78,6 @@ public class MagicLinkServiceImpl implements MagicLinkService {
         TokenAcesso token = new TokenAcesso();
         token.setToken(valorToken);
         token.setFuncionario(funcionario);
-        token.setCriadoEm(Instant.now());
         token.setExpiraEm(Instant.now().plus(24, ChronoUnit.HOURS));
         token.setUsado(false);
 
@@ -79,6 +85,7 @@ public class MagicLinkServiceImpl implements MagicLinkService {
 
         return baseUrl + "/auth/validar-token?valor=" + valorToken;
     }
+
 
     /**
      * Valida um token de Magic Link (TokenAcesso). Se for válido, o token é invalidado (marcado como usado)
@@ -92,7 +99,8 @@ public class MagicLinkServiceImpl implements MagicLinkService {
     @Override
     @Transactional
     public AuthCode validarMagicLinkEGerarAuthCode(String valorToken) {
-        // valida o token de uso único
+
+        // 1. Busca e valida o Magic Link
         TokenAcesso tokenAcesso = tokenAcessoRepository.findByToken(valorToken)
                 .orElseThrow(() -> new ResourceNotFoundException("Magic link inválido ou não encontrado."));
 
@@ -103,28 +111,29 @@ public class MagicLinkServiceImpl implements MagicLinkService {
             throw new BusinessException("Este magic link expirou.");
         }
 
+        // 2. Invalida o Magic Link
         tokenAcesso.setUsado(true);
         tokenAcessoRepository.save(tokenAcesso);
 
-        // cria e salva o código de troca de curta duração
+        // 3. Cria o código de troca de 2 minutos (AuthCode)
         AuthCode authCode = new AuthCode();
         authCode.setFuncionario(tokenAcesso.getFuncionario());
         authCode.setCode(UUID.randomUUID().toString());
-        authCode.setExpiraEm(Instant.now().plus(120, ChronoUnit.SECONDS));
+        authCode.setExpiraEm(Instant.now().plus(120, ChronoUnit.SECONDS)); // 2 minutos de validade
 
         return authCodeRepository.save(authCode);
     }
 
     
     /**
-     * Regenera um novo Magic Link para um funcionário existente e dispara uma notificação via WhatsApp.
-     * Este método é acionado por um Administrador de Pátio autenticado.
+     * Regenera um novo Magic Link para um funcionário existente e agenda uma notificação.
+     * Este método é acionado por um Administrador de Pátio e contém validações de segurança.
      *
      * @param funcionarioId O UUID do funcionário que receberá o novo link.
      * @param adminLogado O UsuarioAdmin autenticado que está realizando a operação.
      * @return A URL completa do novo Magic Link gerado.
      * @throws ResourceNotFoundException se o funcionário não for encontrado.
-     * @throws BusinessException se o funcionário estiver removido.
+     * @throws BusinessException se o funcionário estiver removido ou o admin não tiver pátio.
      * @throws SecurityException se o funcionário não pertencer ao pátio do admin logado.
      */
     @Override
@@ -133,12 +142,12 @@ public class MagicLinkServiceImpl implements MagicLinkService {
         Funcionario funcionario = funcionarioRepository.findById(funcionarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Funcionário não encontrado."));
 
-        // REGRA DE NEGÓCIO: Não é possível gerar um link para um funcionário com status REMOVIDO
+        // Regra 1: Não gerar link para funcionário removido
         if (funcionario.getStatus() == Status.REMOVIDO) {
             throw new BusinessException("Não é possível gerar um link para um funcionário que já foi removido. Reative-o primeiro.");
         }
 
-        // REGRA DE NEGÓCIO: Um admin só pode gerar links para funcionários do seu próprio pátio
+        // Regra 2: Validação de segurança (Admin só pode gerar link para seu próprio pátio)        
         Pateo pateoDoAdmin = pateoRepository.findFirstByGerenciadoPorId(adminLogado.getId())
                 .orElseThrow(() -> new BusinessException("Admin não está associado a nenhum pátio."));
 
@@ -146,22 +155,25 @@ public class MagicLinkServiceImpl implements MagicLinkService {
             throw new SecurityException("Acesso negado: este funcionário não pertence ao seu pátio.");
         }
 
+        // Reutiliza o método base para criar o token e a URL
         String novoLink = this.gerarLink(funcionario);
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                notificationService.enviarMagicLinkPorWhatsapp(funcionario, novoLink);
+                // Chama o serviço @Primary (Twilio WhatsApp)
+                notificationService.enviarMagicLink(funcionario, novoLink);
             }
         });
         
         return novoLink;
     }
 
+
     /**
-     * Gera um novo Magic Link para um funcionário a partir de seu ID.
-     * Este método é para uso interno para testes do painel de Super Admin,
-     * NÃO realiza validações.
+     * Gera um novo Magic Link para um funcionário (usado pelo Super Admin).
+     * Este método é para uso interno (testes do painel), NÃO realiza validações
+     * de segurança de pátio ou status.
      *
      * @param funcionarioId O ID do funcionário.
      * @return A URL completa do novo Magic Link.
@@ -170,6 +182,7 @@ public class MagicLinkServiceImpl implements MagicLinkService {
     public String gerarLink(UUID funcionarioId) {
         Funcionario funcionario = funcionarioRepository.findById(funcionarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Funcionário com ID " + funcionarioId + " não encontrado."));
+        
         return this.gerarLink(funcionario);
     }
 
@@ -185,7 +198,7 @@ public class MagicLinkServiceImpl implements MagicLinkService {
     @Override
     @Transactional
     public TokenResponse trocarAuthCodePorTokens(String code) {
-        // busca e valida o código de troca
+        // 1. Busca e valida o código de troca
         AuthCode authCode = authCodeRepository.findByCode(code)
                 .orElseThrow(() -> new BusinessException("Código de autorização inválido."));
 
@@ -196,19 +209,20 @@ public class MagicLinkServiceImpl implements MagicLinkService {
             throw new BusinessException("Código de autorização expirou.");
         }
 
+        // 2. Invalida (queima) o AuthCode
         authCode.setUsado(true);
         authCodeRepository.save(authCode);
 
         Funcionario funcionario = authCode.getFuncionario();
 
-        // gera o Access Token (JWT) de curta duração
+        // 3. Gera o Access Token (JWT)
         String accessToken = jwtService.generateToken(funcionario);
 
-        // gera e salva o Refresh Token de longa duração
+        // 4. Gera e salva o Refresh Token de longa duração
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setFuncionario(funcionario);
         refreshToken.setToken(UUID.randomUUID().toString());
-        refreshToken.setExpiraEm(Instant.now().plus(30, ChronoUnit.DAYS)); // Validade de 1 mês
+        refreshToken.setExpiraEm(Instant.now().plus(30, ChronoUnit.DAYS)); // 30 dias
         refreshTokenRepository.save(refreshToken);
 
         return new TokenResponse(accessToken, refreshToken.getToken());
@@ -216,8 +230,8 @@ public class MagicLinkServiceImpl implements MagicLinkService {
 
 
     /**
-     * Valida um Refresh Token de longa duração. Se válido, gera um novo Access Token (JWT)
-     * e opcionalmente rotaciona o Refresh Token.
+     * Valida um Refresh Token. Se válido, gera um novo Access Token (JWT)
+     * e rotaciona o Refresh Token (cria um novo e invalida o antigo).
      *
      * @param token O valor do Refresh Token enviado pelo cliente.
      * @return Um novo par de tokens (Access e Refresh).
@@ -226,21 +240,23 @@ public class MagicLinkServiceImpl implements MagicLinkService {
     @Override
     @Transactional
     public TokenResponse renovarTokens(String token) {
-        // busca e valida o refresh token
+
+        // 1. Busca e valida o refresh token
         RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
                 .orElseThrow(() -> new BusinessException("Refresh Token inválido."));
 
         if (refreshToken.getExpiraEm().isBefore(Instant.now())) {
-            refreshTokenRepository.delete(refreshToken);
+            refreshTokenRepository.delete(refreshToken); // Limpa o token expirado
             throw new BusinessException("Refresh Token expirou. Por favor, faça login novamente.");
         }
 
         Funcionario funcionario = refreshToken.getFuncionario();
 
-        // gera o novo Access Token (JWT)
+        // 2. Gera o novo Access Token (JWT)
         String novoAccessToken = jwtService.generateToken(funcionario);
 
-        // invalida o refresh token antigo e cria um novo
+        // 3. ROTACIONA O REFRESH TOKEN (por segurança)
+        // Invalida o token antigo e cria um novo.
         refreshTokenRepository.delete(refreshToken);
         RefreshToken novoRefreshToken = new RefreshToken();
         novoRefreshToken.setFuncionario(funcionario);

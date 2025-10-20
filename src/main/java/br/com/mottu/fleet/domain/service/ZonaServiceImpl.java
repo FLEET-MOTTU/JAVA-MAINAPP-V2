@@ -17,6 +17,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+
+/**
+ * Implementação do serviço de domínio que contém as regras de negócio
+ * para o gerenciamento de Zonas de trabalho dentro de um Pátio.
+ * Todas as operações são validadas contra o admin de pátio autenticado.
+ */
 @Service
 public class ZonaServiceImpl implements ZonaService {
 
@@ -29,10 +35,24 @@ public class ZonaServiceImpl implements ZonaService {
         this.pateoRepository = pateoRepository;
     }
 
+
+    /**
+     * Cria uma nova Zona e a associa a um Pátio.
+     * A segurança é validada pelo método auxiliar findPateoAndVerifyOwnership.
+     *
+     * @param request O DTO contendo o nome e as coordenadas WKT da nova zona.
+     * @param pateoId O ID do pátio onde a zona será criada.
+     * @param adminLogado O admin autenticado que está realizando a operação.
+     * @return A entidade Zona recém-criada e salva.
+     * @throws BusinessException Se as coordenadas WKT forem inválidas.
+     * @throws SecurityException Se o admin não for o dono do pátio.
+     */
     @Override
     @Transactional
     public Zona criar(ZonaRequest request, UUID pateoId, UsuarioAdmin adminLogado) {
         Pateo pateo = findPateoAndVerifyOwnership(pateoId, adminLogado);
+
+        // Converte a string WKT em um objeto Polygon
         Polygon polygon = parseWKT(request.coordenadasWKT());
 
         Zona novaZona = new Zona();
@@ -44,15 +64,30 @@ public class ZonaServiceImpl implements ZonaService {
         return zonaRepository.save(novaZona);
     }
 
+
+    /**
+     * Atualiza o nome e as coordenadas de uma Zona existente.
+     * Realiza uma verificação de segurança dupla:
+     * 1. O admin é dono do pátio?
+     * 2. A zona a ser editada realmente pertence a este pátio?
+     *
+     * @param pateoId O ID do pátio (para verificação de propriedade).
+     * @param zonaId O ID da zona a ser atualizada.
+     * @param request O DTO com os novos dados.
+     * @param adminLogado O admin autenticado.
+     * @return A entidade Zona atualizada.
+     * @throws SecurityException Se o admin não for o dono do pátio.
+     * @throws ResourceNotFoundException Se a zona não for encontrada.
+     * @throws BusinessException Se a zona não pertencer ao pátio ou o WKT for inválido.
+     */
     @Override
     @Transactional
     public Zona atualizar(UUID pateoId, UUID zonaId, ZonaRequest request, UsuarioAdmin adminLogado) {
-        findPateoAndVerifyOwnership(pateoId, adminLogado); // Garante que o pátio pertence ao admin
+        findPateoAndVerifyOwnership(pateoId, adminLogado);
         
         Zona zonaExistente = zonaRepository.findById(zonaId)
             .orElseThrow(() -> new ResourceNotFoundException("Zona com ID " + zonaId + " não encontrada."));
 
-        // Valida se a zona realmente pertence ao pátio informado na URL
         if (!zonaExistente.getPateo().getId().equals(pateoId)) {
             throw new BusinessException("Conflito: A zona informada não pertence ao pátio especificado.");
         }
@@ -64,6 +99,18 @@ public class ZonaServiceImpl implements ZonaService {
         return zonaRepository.save(zonaExistente);
     }
 
+
+    /**
+     * Deleta uma Zona de um Pátio.
+     * Realiza a mesma verificação de segurança dupla do método 'atualizar'.
+     *
+     * @param pateoId O ID do pátio (para verificação de propriedade).
+     * @param zonaId O ID da zona a ser deletada.
+     * @param adminLogado O admin autenticado.
+     * @throws SecurityException Se o admin não for o dono do pátio.
+     * @throws ResourceNotFoundException Se a zona não for encontrada.
+     * @throws BusinessException Se a zona não pertencer ao pátio.
+     */
     @Override
     @Transactional
     public void deletar(UUID pateoId, UUID zonaId, UsuarioAdmin adminLogado) {
@@ -78,6 +125,9 @@ public class ZonaServiceImpl implements ZonaService {
 
         zonaRepository.delete(zonaExistente);
     }
+
+
+    // Métodos Auxiliares
 
     /**
      * Método que busca um pátio e verifica se ele é gerenciado pelo admin logado.

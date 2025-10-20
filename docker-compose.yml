@@ -18,14 +18,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 40
-      start_period: 150s
+      start_period: 210s
 
   fleet-app-java:
     build: .
     container_name: fleet-app-java
     environment:
-      DB_HOST: fleet-db-mysql
-      DB_PORT: 3306
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -38,6 +38,10 @@ services:
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
       TWILIO_WHATSAPP_NUMBER: ${TWILIO_WHATSAPP_NUMBER}
       AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS} 
+      AZURE_SERVICEBUS_CONNECTION_STRING: ${AZURE_SERVICEBUS_CONNECTION_STRING}
+      AZURE_SERVICEBUS_IDLE_TIMEOUT: ${AZURE_SERVICEBUS_IDLE_TIMEOUT}     
     ports:
       - "8080:8080"
     volumes:

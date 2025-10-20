@@ -88,7 +88,13 @@ public class DataInitializer implements CommandLineRunner {
                 ClassPathResource resource = new ClassPathResource("static/images/plantas/planta-pateo-teste.png");
                 try (InputStream inputStream = resource.getInputStream()) {
                     long length = resource.contentLength();
-                    plantaUrl = storageService.upload("plantas", "planta-pateo-teste.png", inputStream, length);
+                    plantaUrl = storageService.upload(
+                        "plantas", 
+                        "planta-pateo-teste.png", 
+                        inputStream, 
+                        length, 
+                        "image/png"
+                    );
                 }
             } catch (Exception e) {
                 log.error("Falha ao fazer upload da planta de teste: {}", e.getMessage());
