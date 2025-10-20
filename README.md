@@ -230,3 +230,7 @@ O schema do banco de dados é gerenciado pelo **Flyway**. Todos os scripts de cr
 `src/main/resources/db/migration`
 
 O Flyway executa as migrações automaticamente na inicialização da aplicação.
+
+### 9. Vídeo Explicativo
+
+Link:
