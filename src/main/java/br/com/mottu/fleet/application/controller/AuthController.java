@@ -27,7 +27,7 @@ public class AuthController {
     private final String deepLinkSuccessPath;
 
     public AuthController(MagicLinkService magicLinkService,
-                          @Value("${application.deeplink.base-url}") String deepLinkBaseUrl,
+                          @Value("${application.base-url}") String deepLinkBaseUrl,
                           @Value("${application.deeplink.login-success-path}") String deepLinkSuccessPath) {
         this.magicLinkService = magicLinkService;
         this.deepLinkBaseUrl = deepLinkBaseUrl;
