@@ -89,14 +89,15 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            .securityMatcher("/api/**")
+            .securityMatcher("/api/**", "/auth/**")
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable) // Desabilita CSRF, pq a API é stateless e usa JWT
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(
                     "/api/auth/login",
                     "/api/auth/exchange-token",
-                    "/api/auth/refresh-token"
+                    "/api/auth/refresh-token",
+                    "/auth/validar-token"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
@@ -126,7 +127,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/css/**", "/js/**", "/error").permitAll()
-                .requestMatchers("/login", "/auth/validar-token", "/ws/**").permitAll()
+                .requestMatchers("/login").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-resources/**").permitAll()
                 .requestMatchers("/admin/**").hasRole("SUPER_ADMIN")
                 .anyRequest().authenticated()
