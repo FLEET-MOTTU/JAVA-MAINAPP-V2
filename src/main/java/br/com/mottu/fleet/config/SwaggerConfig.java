@@ -16,12 +16,11 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
+
 /**
- * Configuração do Swagger (OpenAPI) para o sistema FLEET.
- *
- * Profile-aware:
- * - "dev": gera documentação usando HTTP (localhost, ambiente local)
- * - "prod": força HTTPS e define URL pública
+ * Configuração centralizada do OpenAPI (Springdoc) para a documentação do Swagger UI.
+ * Define as informações globais da API, o esquema de segurança JWT
+ * e customizações para tipos de dados e URLs de servidor.
  */
 @Configuration
 @OpenAPIDefinition(
@@ -37,54 +36,40 @@ import java.util.List;
     bearerFormat = "JWT",
     scheme = "bearer"
 )
+
 public class SwaggerConfig {
 
-    @Value("${spring.profiles.active:prod}")
-    private String activeProfile;
-
-    @Value("${application.base-url:}")
-    private String baseUrl;
-
-
     /**
-     * Define o schema customizado do tipo Polygon (da lib JTS),
-     * representando polígonos no formato WKT.
+     * Ensina o Swagger a exibir o tipo 'Polygon' da biblioteca JTS
+     * como uma String no formato WKT, com uma descrição e um exemplo claros.
+     *
+     * @return Um customizador do OpenAPI.
      */
     @Bean
-    public OpenApiCustomizer polygonSchemaCustomizer() {
+    public OpenApiCustomizer openApiCustomizer() {
         return openApi -> {
             Schema<?> polygonSchema = new StringSchema()
                     .description("Representação de um polígono em formato WKT (Well-Known Text)")
                     .example("POLYGON ((0.1 0.1, 0.4 0.1, 0.4 0.4, 0.1 0.4, 0.1 0.1))");
 
+            // Registra o schema customizado globalmente
             openApi.getComponents().getSchemas().put("Polygon", polygonSchema);
         };
     }
 
 
     /**
-     * Configura o servidor base (HTTP ou HTTPS) exibido no Swagger.
-     * O comportamento muda conforme o profile ativo.
+     * Configura a URL do servidor da API no Swagger.
+     * Forçando o Swagger a usar a URL base definida no env,
+     * Config usada pra resolver problema de "Mixed Content" (HTTP/HTTPS)
+     * ao acessar a documentação através de um proxy reverso (Ngrok).
+     *
+     * @param baseUrl A URL base da aplicação, injetada a partir da propriedade 'application.base-url'.
+     * @return Um objeto OpenAPI configurado com a URL do servidor correta.
      */
     @Bean
-    public OpenAPI customOpenAPI() {
-        String resolvedUrl;
-
-        if ("dev".equalsIgnoreCase(activeProfile)) {
-            resolvedUrl = baseUrl.isBlank()
-                    ? "http://localhost:8080"
-                    : baseUrl.replace("https://", "http://");
-        } else {
-            if (baseUrl.isBlank()) {
-                resolvedUrl = "https://fleet-app-journeytiago7.westus2.azurecontainer.io";
-            } else {
-                resolvedUrl = baseUrl.replace("http://", "https://");
-            }
-        }
-
+    public OpenAPI customOpenAPI(@Value("${application.base-url}") String baseUrl) {
         return new OpenAPI()
-                .servers(List.of(new Server()
-                        .url(resolvedUrl)
-                        .description("Ambiente: " + activeProfile.toUpperCase())));
+            .servers(List.of(new Server().url(baseUrl).description("URL do Ambiente Atual")));
     }
 }
