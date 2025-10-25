@@ -19,4 +19,4 @@ USER appuser
 
 EXPOSE 80
 
-ENTRYPOINT ["sh", "-c", "java -jar app.jar || (echo 'Spring crashed. Keeping container alive for debug'; sleep 3600)"]
+ENTRYPOINT ["sh", "-c", "java -jar app.jar --server.port=80 || (echo 'Spring crashed. Keeping container alive for debug'; sleep 3600)"]
