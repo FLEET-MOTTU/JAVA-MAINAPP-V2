@@ -18,4 +18,4 @@ RUN chown appuser:appgroup /app && \
 USER appuser
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java -jar app.jar || (echo '⚠️ Spring Boot crashed. Keeping container alive for debug...'; sleep 3600)"]
