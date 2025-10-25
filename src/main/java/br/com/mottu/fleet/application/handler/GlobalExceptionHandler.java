@@ -1,13 +1,9 @@
 package br.com.mottu.fleet.application.handler;
 
-import br.com.mottu.fleet.application.dto.ErrorResponse;
-import br.com.mottu.fleet.domain.exception.BusinessException;
-import br.com.mottu.fleet.domain.exception.EmailAlreadyExistsException;
-import br.com.mottu.fleet.domain.exception.InvalidTokenException;
-import br.com.mottu.fleet.domain.exception.ResourceNotFoundException;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.ConstraintViolationException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,10 +20,13 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.util.stream.Collectors;
+import br.com.mottu.fleet.application.dto.ErrorResponse;
+import br.com.mottu.fleet.domain.exception.BusinessException;
+import br.com.mottu.fleet.domain.exception.EmailAlreadyExistsException;
+import br.com.mottu.fleet.domain.exception.InvalidTokenException;
+import br.com.mottu.fleet.domain.exception.ResourceNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 
 /**
  * Handler global para exceções. Centraliza o tratamento de erros, decidindo
@@ -47,7 +46,7 @@ public class GlobalExceptionHandler {
      * @param deepLinkErrorPath Caminho para a tela de erro no deep link (ex: login-error).
      */
     public GlobalExceptionHandler(
-            @Value("${application.deeplink.base-url}") String deepLinkBaseUrl,
+            @Value("${application.deeplink.login-success-path}") String deepLinkBaseUrl,
             @Value("${application.deeplink.login-error-path}") String deepLinkErrorPath) {
         this.deepLinkBaseUrl = deepLinkBaseUrl;
         this.deepLinkErrorPath = deepLinkErrorPath;
