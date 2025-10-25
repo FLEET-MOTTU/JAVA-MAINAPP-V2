@@ -104,15 +104,23 @@ public class MagicLinkServiceImpl implements MagicLinkService {
         TokenAcesso tokenAcesso = tokenAcessoRepository.findByToken(valorToken)
                 .orElseThrow(() -> new ResourceNotFoundException("Magic link inválido ou não encontrado."));
 
-        if (tokenAcesso.isUsado()) {
-            throw new BusinessException("Este magic link já foi utilizado.");
-        }
+        // 2. Valida se expirou (pelo tempo de criação)
         if (tokenAcesso.getExpiraEm().isBefore(Instant.now())) {
             throw new BusinessException("Este magic link expirou.");
         }
 
-        // 2. Invalida o Magic Link
+        if (tokenAcesso.isUsado()) {
+            Instant usadoEm = tokenAcesso.getUsadoEm();
+            Instant agora = Instant.now();
+
+            if (usadoEm != null && usadoEm.plus(5, ChronoUnit.MINUTES).isBefore(agora)) {
+                throw new BusinessException("Este magic link já foi utilizado.");
+            }
+        }
+
+        // 3. Invalida o Magic Link
         tokenAcesso.setUsado(true);
+        tokenAcesso.setUsadoEm(Instant.now());
         tokenAcessoRepository.save(tokenAcesso);
 
         // 3. Cria o código de troca de 2 minutos (AuthCode)

@@ -1,0 +1,2 @@
+ALTER TABLE token_acesso
+ADD COLUMN usado_em DATETIME(6) NULL;
