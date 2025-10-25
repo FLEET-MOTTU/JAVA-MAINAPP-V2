@@ -17,6 +17,6 @@ RUN chown appuser:appgroup /app && chown appuser:appgroup /app/app.jar
 
 USER appuser
 
-EXPOSE 80
+EXPOSE 8080
 
-ENTRYPOINT ["sh", "-c", "java -jar app.jar --server.port=80 || (echo 'Spring crashed. Keeping container alive for debug'; sleep 3600)"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
