@@ -89,7 +89,7 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            .securityMatcher("/api/**").securityMatcher("/auth/**")
+            .securityMatcher("/api/**", "/auth/**")
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable) // Desabilita CSRF, pq a API é stateless e usa JWT
             .formLogin(AbstractHttpConfigurer::disable)
@@ -99,7 +99,7 @@ public class SecurityConfig {
                     "/api/auth/login",
                     "/api/auth/exchange-token",
                     "/api/auth/refresh-token",
-                    "/auth/validar-token"
+                    "/auth/**"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
