@@ -89,7 +89,7 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            .securityMatcher("/api/**", "/auth/**")
+            .securityMatcher("/api/**").securityMatcher("/auth/**")
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable) // Desabilita CSRF, pq a API é stateless e usa JWT
             .formLogin(AbstractHttpConfigurer::disable)
@@ -127,6 +127,7 @@ public class SecurityConfig {
                 .ignoringRequestMatchers("/ws/**")
             )
             .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers("/auth/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/css/**", "/js/**", "/error").permitAll()
                 .requestMatchers("/login").permitAll()
