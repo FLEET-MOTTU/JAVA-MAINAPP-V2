@@ -1,11 +1,15 @@
 package br.com.mottu.fleet.domain.service;
 
-import br.com.mottu.fleet.application.dto.web.OnboardingRequest;
+import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
+import br.com.mottu.fleet.application.dto.web.OnboardingRequest;
+import br.com.mottu.fleet.application.dto.integration.PateoSyncPayload;
+import br.com.mottu.fleet.infrastructure.publisher.InterServiceEventPublisher;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 
 /**
@@ -19,11 +23,14 @@ public class OnboardingServiceImpl implements OnboardingService {
 
     private final UsuarioAdminService usuarioAdminService;
     private final PateoService pateoService;
+    private final InterServiceEventPublisher eventPublisher;
 
-    @Autowired
-    public OnboardingServiceImpl(UsuarioAdminService usuarioAdminService, PateoService pateoService) {
+    public OnboardingServiceImpl(UsuarioAdminService usuarioAdminService, 
+                                 PateoService pateoService,
+                                 InterServiceEventPublisher eventPublisher) {
         this.usuarioAdminService = usuarioAdminService;
         this.pateoService = pateoService;
+        this.eventPublisher = eventPublisher;
     }
 
 
@@ -32,16 +39,21 @@ public class OnboardingServiceImpl implements OnboardingService {
      * Regra de Negócio: O onboarding consiste em duas etapas atômicas:
      * 1. Criar um novo Administrador de Pátio.
      * 2. Criar um novo Pátio e associá-lo a este administrador recém-criado.
-     * A anotação @Transactional garante que ambas as operações sejam concluídas com sucesso,
-     * ou nenhuma delas é efetivada, mantendo a consistência dos dados.
-     *
+     * 3. Publicar evento de criação de um pátio no publisher para sincronização com API de C#
      * @param request DTO contendo os dados para a criação da unidade e do administrador.
      */
     @Override
     @Transactional
     public void executar(OnboardingRequest request) {
         UsuarioAdmin adminSalvo = usuarioAdminService.criarAdminDePateo(request);
-        pateoService.criarPateo(request, adminSalvo);
+        Pateo pateoSalvo = pateoService.criarPateo(request, adminSalvo);
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                PateoSyncPayload payload = new PateoSyncPayload(pateoSalvo);
+                eventPublisher.publishEvent(payload, "PATEO_CRIADO");
+            }
+        });
     }
-    
 }

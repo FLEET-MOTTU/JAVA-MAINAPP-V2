@@ -3,6 +3,7 @@ package br.com.mottu.fleet.domain.service;
 import br.com.mottu.fleet.application.dto.web.FuncionarioViewModel;
 import br.com.mottu.fleet.application.dto.web.OnboardingRequest;
 import br.com.mottu.fleet.application.dto.web.PateoViewModel;
+import br.com.mottu.fleet.application.dto.integration.PateoSyncPayload;
 import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.entity.TokenAcesso;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
@@ -12,11 +13,14 @@ import br.com.mottu.fleet.domain.exception.BusinessException;
 import br.com.mottu.fleet.domain.exception.ResourceNotFoundException;
 import br.com.mottu.fleet.domain.repository.PateoRepository;
 import br.com.mottu.fleet.domain.repository.TokenAcessoRepository;
+import br.com.mottu.fleet.infrastructure.publisher.InterServiceEventPublisher;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -39,15 +43,18 @@ public class PateoServiceImpl implements PateoService {
     private final TokenAcessoRepository tokenAcessoRepository;
     private final String baseUrl;
     private final StorageService storageService;
+    private final InterServiceEventPublisher eventPublisher;
     
     public PateoServiceImpl(PateoRepository pateoRepository,
                             TokenAcessoRepository tokenAcessoRepository,
                             StorageService storageService,
-                            @Value("${application.base-url}") String baseUrl) {
+                            @Value("${application.base-url}") String baseUrl,
+                            InterServiceEventPublisher eventPublisher) {
         this.pateoRepository = pateoRepository;
         this.tokenAcessoRepository = tokenAcessoRepository;
         this.baseUrl = baseUrl;
         this.storageService = storageService;
+        this.eventPublisher = eventPublisher;
     }
 
 
@@ -75,7 +82,10 @@ public class PateoServiceImpl implements PateoService {
         novoPateo.setNome(request.getNomePateo());
         novoPateo.setGerenciadoPor(adminResponsavel);
         novoPateo.setStatus(Status.ATIVO);
-        return pateoRepository.save(novoPateo);
+        
+        Pateo pateoSalvo = pateoRepository.save(novoPateo);
+        
+        return pateoSalvo;
     }
 
 
@@ -184,7 +194,17 @@ public class PateoServiceImpl implements PateoService {
         pateo.setPlantaLargura(largura);
         pateo.setPlantaAltura(altura);
         
-        return pateoRepository.save(pateo);
+        Pateo pateoAtualizado = pateoRepository.save(pateo);
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                PateoSyncPayload payload = new PateoSyncPayload(pateoAtualizado);
+                eventPublisher.publishEvent(payload, "PATEO_ATUALIZADO");
+            }
+        });
+
+        return pateoAtualizado;
     }
 
 

@@ -13,7 +13,7 @@ import br.com.mottu.fleet.domain.repository.FuncionarioRepository;
 import br.com.mottu.fleet.domain.repository.PateoRepository;
 import br.com.mottu.fleet.domain.repository.specification.FuncionarioSpecification;
 import br.com.mottu.fleet.infrastructure.router.AsyncNotificationOrchestrator;
-import br.com.mottu.fleet.infrastructure.publisher.FuncionarioEventPublisher;
+import br.com.mottu.fleet.infrastructure.publisher.InterServiceEventPublisher;
 
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -40,14 +40,14 @@ public class FuncionarioServiceImpl implements FuncionarioService {
     private final MagicLinkService magicLinkService;
     private final StorageService storageService;
     private final AsyncNotificationOrchestrator asyncOrchestrator;
-    private final FuncionarioEventPublisher eventPublisher;
+    private final InterServiceEventPublisher eventPublisher;
 
     public FuncionarioServiceImpl(FuncionarioRepository funcionarioRepository,
                                   PateoRepository pateoRepository,
                                   MagicLinkService magicLinkService,
                                   StorageService storageService,
                                   AsyncNotificationOrchestrator asyncOrchestrator,
-                                  FuncionarioEventPublisher eventPublisher) {
+                                  InterServiceEventPublisher eventPublisher) {
         this.funcionarioRepository = funcionarioRepository;
         this.pateoRepository = pateoRepository;
         this.magicLinkService = magicLinkService;
@@ -107,7 +107,7 @@ public class FuncionarioServiceImpl implements FuncionarioService {
                 asyncOrchestrator.dispararNotificacaoPosCriacao(funcionarioSalvo.getId(), link);
                 
                 // 2: Dispara o evento de sincronização para a API de C#
-                eventPublisher.publishFuncionarioEvent(funcionarioSalvo, "FUNCIONARIO_CRIADO");
+                eventPublisher.publishEvent(funcionarioSalvo, "FUNCIONARIO_CRIADO");
             }
         });
         
@@ -162,7 +162,7 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                eventPublisher.publishFuncionarioEvent(funcionarioAtualizado, "FUNCIONARIO_ATUALIZADO");
+                eventPublisher.publishEvent(funcionarioAtualizado, "FUNCIONARIO_ATUALIZADO");
             }
         });
 
@@ -197,7 +197,7 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                eventPublisher.publishFuncionarioEvent(funcionarioAtualizadoFoto, "FUNCIONARIO_ATUALIZADO_FOTO");
+                eventPublisher.publishEvent(funcionarioAtualizadoFoto, "FUNCIONARIO_ATUALIZADO_FOTO");
             }
         });
 
@@ -222,7 +222,7 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                eventPublisher.publishFuncionarioEvent(funcionarioDesativado, "FUNCIONARIO_DESATIVADO");
+                eventPublisher.publishEvent(funcionarioDesativado, "FUNCIONARIO_DESATIVADO");
             }
         });
     }
@@ -249,7 +249,7 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                eventPublisher.publishFuncionarioEvent(funcionarioReativado, "FUNCIONARIO_REATIVADO");
+                eventPublisher.publishEvent(funcionarioReativado, "FUNCIONARIO_REATIVADO");
             }
         });
     }    

@@ -1,6 +1,7 @@
 package br.com.mottu.fleet.domain.service;
 
 import br.com.mottu.fleet.application.dto.api.ZonaRequest;
+import br.com.mottu.fleet.application.dto.integration.ZonaSyncPayload;
 import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
 import br.com.mottu.fleet.domain.entity.Zona;
@@ -8,6 +9,10 @@ import br.com.mottu.fleet.domain.exception.BusinessException;
 import br.com.mottu.fleet.domain.exception.ResourceNotFoundException;
 import br.com.mottu.fleet.domain.repository.PateoRepository;
 import br.com.mottu.fleet.domain.repository.ZonaRepository;
+import br.com.mottu.fleet.infrastructure.publisher.InterServiceEventPublisher;
+
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.io.ParseException;
@@ -28,11 +33,15 @@ public class ZonaServiceImpl implements ZonaService {
 
     private final ZonaRepository zonaRepository;
     private final PateoRepository pateoRepository;
+    private final InterServiceEventPublisher eventPublisher;
     private final WKTReader wktReader = new WKTReader();
 
-    public ZonaServiceImpl(ZonaRepository zonaRepository, PateoRepository pateoRepository) {
+    public ZonaServiceImpl(ZonaRepository zonaRepository, 
+                           PateoRepository pateoRepository,
+                           InterServiceEventPublisher eventPublisher) {
         this.zonaRepository = zonaRepository;
         this.pateoRepository = pateoRepository;
+        this.eventPublisher = eventPublisher;
     }
 
 
@@ -61,7 +70,17 @@ public class ZonaServiceImpl implements ZonaService {
         novaZona.setPateo(pateo);
         novaZona.setCriadoPor(adminLogado);
 
-        return zonaRepository.save(novaZona);
+        Zona zonaSalva = zonaRepository.save(novaZona);
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                ZonaSyncPayload payload = new ZonaSyncPayload(zonaSalva);
+                eventPublisher.publishEvent(payload, "ZONA_CRIADA");
+            }
+        });
+
+        return zonaSalva;
     }
 
 
@@ -96,7 +115,17 @@ public class ZonaServiceImpl implements ZonaService {
         zonaExistente.setNome(request.nome());
         zonaExistente.setCoordenadas(polygon);
 
-        return zonaRepository.save(zonaExistente);
+        Zona zonaAtualizada = zonaRepository.save(zonaExistente);
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                ZonaSyncPayload payload = new ZonaSyncPayload(zonaAtualizada);
+                eventPublisher.publishEvent(payload, "ZONA_ATUALIZADA");
+            }
+        });
+
+        return zonaAtualizada;
     }
 
 
@@ -124,6 +153,14 @@ public class ZonaServiceImpl implements ZonaService {
         }
 
         zonaRepository.delete(zonaExistente);
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                ZonaSyncPayload payload = new ZonaSyncPayload(zonaExistente);
+                eventPublisher.publishEvent(payload, "ZONA_DELETADA");
+            }
+        });
     }
 
 
