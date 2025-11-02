@@ -2,6 +2,7 @@ package br.com.mottu.fleet.domain.service;
 
 import br.com.mottu.fleet.application.dto.api.FuncionarioCreateRequest;
 import br.com.mottu.fleet.application.dto.api.FuncionarioUpdateRequest;
+import br.com.mottu.fleet.application.dto.integration.FuncionarioSyncPayload;
 import br.com.mottu.fleet.domain.entity.Funcionario;
 import br.com.mottu.fleet.domain.entity.Pateo;
 import br.com.mottu.fleet.domain.entity.UsuarioAdmin;
@@ -99,7 +100,7 @@ public class FuncionarioServiceImpl implements FuncionarioService {
 
         Funcionario funcionarioSalvo = funcionarioRepository.save(novoFuncionario);
         String link = magicLinkService.gerarLink(funcionarioSalvo);
-
+        
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
@@ -107,7 +108,8 @@ public class FuncionarioServiceImpl implements FuncionarioService {
                 asyncOrchestrator.dispararNotificacaoPosCriacao(funcionarioSalvo.getId(), link);
                 
                 // 2: Dispara o evento de sincronização para a API de C#
-                eventPublisher.publishEvent(funcionarioSalvo, "FUNCIONARIO_CRIADO");
+                FuncionarioSyncPayload payload = new FuncionarioSyncPayload(funcionarioSalvo);
+                eventPublisher.publishEvent(payload, "FUNCIONARIO_CRIADO");
             }
         });
         
@@ -162,7 +164,8 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                eventPublisher.publishEvent(funcionarioAtualizado, "FUNCIONARIO_ATUALIZADO");
+                FuncionarioSyncPayload payload = new FuncionarioSyncPayload(funcionarioAtualizado);
+                eventPublisher.publishEvent(payload, "FUNCIONARIO_ATUALIZADO");
             }
         });
 
@@ -197,7 +200,8 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                eventPublisher.publishEvent(funcionarioAtualizadoFoto, "FUNCIONARIO_ATUALIZADO_FOTO");
+                FuncionarioSyncPayload payload = new FuncionarioSyncPayload(funcionarioAtualizadoFoto);
+                eventPublisher.publishEvent(payload, "FUNCIONARIO_ATUALIZADO_FOTO");
             }
         });
 
@@ -222,7 +226,8 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                eventPublisher.publishEvent(funcionarioDesativado, "FUNCIONARIO_DESATIVADO");
+                FuncionarioSyncPayload payload = new FuncionarioSyncPayload(funcionarioDesativado);
+                eventPublisher.publishEvent(payload, "FUNCIONARIO_DESATIVADO");
             }
         });
     }
@@ -249,10 +254,11 @@ public class FuncionarioServiceImpl implements FuncionarioService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                eventPublisher.publishEvent(funcionarioReativado, "FUNCIONARIO_REATIVADO");
+                FuncionarioSyncPayload payload = new FuncionarioSyncPayload(funcionarioReativado);
+                eventPublisher.publishEvent(payload, "FUNCIONARIO_REATIVADO");
             }
         });
-    }    
+    }
 
     
     // --- Métodos Auxiliares ---
