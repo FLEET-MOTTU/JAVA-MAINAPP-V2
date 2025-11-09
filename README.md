@@ -234,4 +234,4 @@ O Flyway executa as migrações automaticamente na inicialização da aplicaçã
 ### 9. Vídeo Explicativo
 
 Disciplina JAVA ADVANCED: [Link]
-Disciplina DEVOPS TOOLS & CLOUD COMPUTING: [Link] a
+Disciplina DEVOPS TOOLS & CLOUD COMPUTING: [Link]
