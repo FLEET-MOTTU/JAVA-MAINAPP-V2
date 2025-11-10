@@ -231,7 +231,12 @@ O schema do banco de dados é gerenciado pelo **Flyway**. Todos os scripts de cr
 
 O Flyway executa as migrações automaticamente na inicialização da aplicação.
 
-### 9. Vídeo Explicativo
+### 9. Deploy
+A API foi provisionada em nuvem utilizando o Azure Container Instances (em conjunto com a disciplina DEVOPS TOOLS & CLOUD COMPUTING) e está disponível através dos links: 
+1. Painel de Super Admin: [Link]http://fleet-app-journeytiago7.westus2.azurecontainer.io:8080/login
+2. Swagger: [Link]http://fleet-app-journeytiago7.westus2.azurecontainer.io:8080/swagger-ui/index.html
 
-Disciplina JAVA ADVANCED: [Link]
-Disciplina DEVOPS TOOLS & CLOUD COMPUTING: [Link]
+### 10. Vídeos Explicativos
+
+Disciplina JAVA ADVANCED: [Link]https://youtu.be/BWM47Hv5H34
+Disciplina DEVOPS TOOLS & CLOUD COMPUTING: [Link]https://youtu.be/-ANBNfjZYp0
